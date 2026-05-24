@@ -1,0 +1,2848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FloodLink — Autonomous Aerial Delivery System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #020b14;
+  --bg-secondary: #040f1c;
+  --bg-card: #071425;
+  --bg-card2: #081830;
+  --cyan: #00e5ff;
+  --cyan-dim: #00b8cc;
+  --green: #00ff88;
+  --green-dim: #00cc6a;
+  --amber: #ffb300;
+  --red: #ff3d3d;
+  --purple: #b44dff;
+  --blue: #2979ff;
+  --text-primary: #e0f7fa;
+  --text-secondary: #78909c;
+  --text-dim: #546e7a;
+  --border: #0d2137;
+  --border-glow: #00e5ff33;
+  --grid-color: #0a2030;
+  --font-display: 'Orbitron', monospace;
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-body: 'Rajdhani', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* GRID BACKGROUND */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* SCANLINE OVERLAY */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+/* ========== NAV ========== */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(2,11,20,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-glow);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px var(--cyan);
+}
+
+.nav-links {
+  display: flex;
+  gap: 0;
+  list-style: none;
+}
+
+.nav-links a {
+  display: block;
+  padding: 0.4rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: color 0.2s, text-shadow 0.2s;
+  border-left: 1px solid var(--border);
+}
+
+.nav-links a:hover { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+
+/* ========== HERO ========== */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 2rem 4rem;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.hero-bg-pulse {
+  position: absolute;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+  animation: pulse-bg 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-bg {
+  0%,100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.hero-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--cyan);
+  letter-spacing: 4px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-glow);
+  padding: 0.3rem 1rem;
+  border-radius: 2px;
+  animation: fadeInDown 0.8s ease forwards;
+  opacity: 0;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.05;
+  margin-bottom: 0.8rem;
+  animation: fadeInUp 1s ease 0.2s forwards;
+  opacity: 0;
+}
+
+.hero-title span { color: var(--cyan); text-shadow: 0 0 30px var(--cyan), 0 0 60px rgba(0,229,255,0.3); }
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 700px;
+  line-height: 1.6;
+  margin-bottom: 3rem;
+  letter-spacing: 0.5px;
+  animation: fadeInUp 1s ease 0.4s forwards;
+  opacity: 0;
+}
+
+.hero-badges {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeInUp 1s ease 0.6s forwards;
+  opacity: 0;
+}
+
+.badge {
+  padding: 0.4rem 1rem;
+  border: 1px solid;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  border-radius: 2px;
+}
+
+.badge-cyan { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.05); }
+.badge-green { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
+.badge-amber { border-color: var(--amber); color: var(--amber); background: rgba(255,179,0,0.05); }
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  animation: float 2s ease-in-out infinite, fadeIn 1s ease 1.5s forwards;
+  opacity: 0;
+}
+
+.scroll-hint span { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim); letter-spacing: 2px; }
+
+.scroll-arrow {
+  width: 20px; height: 20px;
+  border-right: 2px solid var(--cyan-dim);
+  border-bottom: 2px solid var(--cyan-dim);
+  transform: rotate(45deg);
+}
+
+@keyframes float { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+@keyframes fadeIn { to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== SECTION WRAPPER ========== */
+section {
+  position: relative;
+  z-index: 2;
+  padding: 5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 3.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.section-num {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--border-glow);
+  line-height: 1;
+  opacity: 0.4;
+  min-width: 80px;
+  text-align: right;
+}
+
+.section-info {}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--cyan);
+  letter-spacing: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: 2px;
+}
+
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), transparent);
+  margin-bottom: 3rem;
+  opacity: 0.3;
+}
+
+/* ========== DRONE OVERVIEW DIAGRAM ========== */
+.drone-diagram-container {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 4px;
+  padding: 3rem 2rem 2rem;
+  overflow: hidden;
+  margin-bottom: 3rem;
+}
+
+.drone-diagram-container::before {
+  content: 'SYSTEM ARCHITECTURE';
+  position: absolute;
+  top: 0.8rem; left: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  opacity: 0.6;
+}
+
+.drone-diagram-container::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--green), var(--cyan));
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer { 0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; } }
+
+/* DRONE SVG */
+.drone-svg-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+  position: relative;
+}
+
+/* ========== COMPONENT CARDS GRID ========== */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.2rem;
+}
+
+.comp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.comp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--card-accent, var(--cyan));
+  transition: width 0.3s ease;
+}
+
+.comp-card:hover {
+  border-color: var(--card-accent, var(--cyan));
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px var(--border-glow);
+}
+
+.comp-card:hover::before { width: 100%; opacity: 0.05; }
+
+.comp-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.comp-icon {
+  width: 44px; height: 44px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: var(--icon-bg, rgba(0,229,255,0.1));
+  border: 1px solid var(--card-accent, var(--cyan));
+  flex-shrink: 0;
+}
+
+.comp-name {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--card-accent, var(--cyan));
+  margin-bottom: 0.2rem;
+}
+
+.comp-model {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.comp-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.comp-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.spec-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+/* ========== CONNECTION DIAGRAM ========== */
+.connection-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 4px;
+  padding: 2rem;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ========== PAYLOAD FLOW ========== */
+.flow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: center;
+}
+
+.flow-node {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.2rem 2rem;
+  min-width: 280px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.flow-node:hover {
+  border-color: var(--node-color, var(--cyan));
+  box-shadow: 0 0 20px rgba(0,229,255,0.15);
+}
+
+.flow-node-title {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 0.3rem;
+  color: var(--node-color, var(--cyan));
+}
+
+.flow-node-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0.3rem 0;
+  position: relative;
+}
+
+.flow-line {
+  width: 2px;
+  height: 30px;
+  background: linear-gradient(to bottom, var(--arrow-color, var(--cyan)), transparent);
+  position: relative;
+}
+
+.flow-line::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid var(--arrow-color, var(--cyan));
+}
+
+.flow-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  margin: 0.3rem 0;
+}
+
+/* ========== TABS ========== */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 0.8rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ========== MODAL ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,11,20,0.92);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--cyan);
+  border-radius: 4px;
+  padding: 2.5rem;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 60px rgba(0,229,255,0.2);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 32px; height: 32px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close:hover { border-color: var(--red); color: var(--red); }
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.modal-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--cyan);
+  letter-spacing: 3px;
+  margin-bottom: 0.8rem;
+  margin-top: 1.5rem;
+}
+
+.modal-body p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.spec-table tr { border-bottom: 1px solid var(--border); }
+.spec-table td {
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.spec-table td:first-child { color: var(--text-dim); width: 40%; }
+.spec-table td:last-child { color: var(--text-primary); }
+
+/* ========== COMPARISON SECTION ========== */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) { .comparison-grid { grid-template-columns: 1fr; } }
+
+.comp-column {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.comp-column-header {
+  padding: 1rem 1.5rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.current-header { background: rgba(255,61,61,0.1); color: var(--red); border-bottom: 1px solid rgba(255,61,61,0.3); }
+.suggested-header { background: rgba(0,255,136,0.1); color: var(--green); border-bottom: 1px solid rgba(0,255,136,0.3); }
+
+.comp-column-body { padding: 1.2rem 1.5rem; }
+
+.comp-item {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.comp-item:last-child { border-bottom: none; }
+
+.comp-item-name {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.comp-item-detail {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.comp-item-price {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+
+.price-current { color: var(--amber); }
+.price-suggested { color: var(--green); }
+
+.limitation-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  background: rgba(255,61,61,0.15);
+  border: 1px solid rgba(255,61,61,0.3);
+  color: var(--red);
+  margin-top: 0.2rem;
+}
+
+.upgrade-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  background: rgba(0,255,136,0.1);
+  border: 1px solid rgba(0,255,136,0.3);
+  color: var(--green);
+  margin-top: 0.2rem;
+}
+
+/* ========== CONNECTION DIAGRAM SVG ========== */
+.conn-diagram {
+  width: 100%;
+  min-height: 500px;
+  position: relative;
+}
+
+/* ========== STATUS BAR ========== */
+.status-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 30px;
+  background: rgba(2,11,20,0.95);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 2rem;
+  z-index: 999;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ========== DATA STREAM ========== */
+.data-stream {
+  position: fixed;
+  right: 0; top: 60px; bottom: 30px;
+  width: 180px;
+  background: rgba(2,11,20,0.8);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+  z-index: 100;
+  display: none;
+}
+
+@media (min-width: 1600px) { .data-stream { display: block; } }
+
+.stream-header {
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stream-content {
+  padding: 0.5rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+  animation: stream-scroll 20s linear infinite;
+}
+
+@keyframes stream-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+/* ========== ANIMATED WIRING ========== */
+.wire-pulse {
+  stroke-dasharray: 8 4;
+  animation: dash 1.5s linear infinite;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: -24; }
+}
+
+.data-pulse {
+  stroke-dasharray: 4 20;
+  animation: data-flow 2s linear infinite;
+}
+
+@keyframes data-flow {
+  to { stroke-dashoffset: -48; }
+}
+
+/* ========== PROGRESS BARS ========== */
+.perf-bar-container {
+  margin-bottom: 1rem;
+}
+
+.perf-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.perf-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.perf-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  width: 0%;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== PAYLOAD FLOWCHART ========== */
+.payload-flow-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 2rem 0;
+}
+
+.pf-node {
+  border-radius: 4px;
+  padding: 1rem 2rem;
+  min-width: 260px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pf-normal { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.05); }
+.pf-normal:hover { background: rgba(0,229,255,0.12); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
+.pf-decision { border-color: var(--amber); color: var(--amber); background: rgba(255,179,0,0.05); transform: rotate(0); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); padding: 1.5rem 3rem; }
+.pf-alert { border-color: var(--red); color: var(--red); background: rgba(255,61,61,0.05); }
+.pf-alert:hover { background: rgba(255,61,61,0.1); }
+.pf-success { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
+.pf-success:hover { background: rgba(0,255,136,0.1); }
+
+.pf-arrow {
+  width: 2px;
+  height: 24px;
+  background: var(--arrow-col, var(--cyan));
+  position: relative;
+  margin: 0 auto;
+}
+
+.pf-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--arrow-col, var(--cyan));
+}
+
+.pf-row {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.pf-side-arrow {
+  width: 40px;
+  height: 2px;
+  background: var(--red);
+  position: relative;
+}
+
+.pf-side-arrow::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--red);
+}
+
+/* ========== ANIMATE ON SCROLL ========== */
+.aos {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.aos.visible { opacity: 1; transform: translateY(0); }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  section { padding: 3rem 1rem; }
+  .section-num { display: none; }
+  .comp-grid { grid-template-columns: 1fr; }
+}
+
+/* ========== SPECIAL: ROTATING DRONE ========== */
+.drone-3d-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 2rem;
+}
+
+/* ========== COST TABLE ========== */
+.cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.cost-table th {
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  border-bottom: 1px solid var(--border-glow);
+}
+
+.cost-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.cost-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.cost-table .cat-row td {
+  background: rgba(0,229,255,0.04);
+  color: var(--cyan);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 0.5rem 1rem;
+}
+
+.total-row td {
+  border-top: 1px solid var(--cyan);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.green-val { color: var(--green); }
+.amber-val { color: var(--amber); }
+.red-val { color: var(--red); }
+
+/* ========== WIRING SVG CONTAINER ========== */
+.wiring-svg-container {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2rem;
+  overflow: auto;
+}
+
+/* ========== ANIMATED BG PARTICLES ========== */
+.particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: var(--cyan);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particle-float linear infinite;
+}
+
+@keyframes particle-float {
+  0% { opacity: 0; transform: translateY(100vh) translateX(0); }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-20px) translateX(40px); }
+}
+
+/* CORNER DECORATION */
+.corner-deco {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--cyan);
+  border-style: solid;
+  opacity: 0.4;
+}
+.corner-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+.corner-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+.corner-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+.corner-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+</style>
+</head>
+<body>
+
+<!-- PARTICLES -->
+<div class="particles" id="particles"></div>
+
+<!-- DATA STREAM SIDEBAR -->
+<div class="data-stream">
+  <div class="stream-header">// TELEMETRY FEED</div>
+  <div class="stream-content" id="streamContent"></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">FLOODLINK</div>
+  <ul class="nav-links">
+    <li><a href="#overview">OVERVIEW</a></li>
+    <li><a href="#base-drone">BASE DRONE</a></li>
+    <li><a href="#obstacle">OBSTACLE AVOIDANCE</a></li>
+    <li><a href="#payload">PAYLOAD SYSTEM</a></li>
+    <li><a href="#wiring">WIRING</a></li>
+    <li><a href="#comparison">UPGRADE ANALYSIS</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg-pulse"></div>
+  <div class="hero-tag">// AIUB CAPSTONE — EEE DEPARTMENT</div>
+  <h1 class="hero-title">FLOOD<span>LINK</span></h1>
+  <p class="hero-subtitle">An Autonomous Aerial Delivery System for Flood Disaster Response — complete component architecture, system connections, and upgrade analysis.</p>
+  <div class="hero-badges">
+    <span class="badge badge-cyan">QUADCOPTER UAV</span>
+    <span class="badge badge-green">SMART PAYLOAD BOX</span>
+    <span class="badge badge-amber">LIDAR OBSTACLE AVOIDANCE</span>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLL TO EXPLORE</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 1: SYSTEM OVERVIEW ===================== -->
+<section id="overview">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-info">
+      <div class="section-label">// SYSTEM OVERVIEW</div>
+      <h2 class="section-title">COMPLETE SYSTEM ARCHITECTURE</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <!-- ANIMATED SVG ARCHITECTURE DIAGRAM -->
+  <div class="drone-diagram-container aos">
+    <div class="corner-deco corner-tl"></div>
+    <div class="corner-deco corner-tr"></div>
+    <div class="corner-deco corner-bl"></div>
+    <div class="corner-deco corner-br"></div>
+
+    <svg viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;display:block;margin:auto;">
+      <defs>
+        <filter id="glow-c"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="glow-g"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="arrow-c" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#00e5ff" opacity="0.7"/>
+        </marker>
+        <marker id="arrow-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#00ff88" opacity="0.7"/>
+        </marker>
+        <marker id="arrow-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#ffb300" opacity="0.7"/>
+        </marker>
+        <marker id="arrow-p" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#b44dff" opacity="0.7"/>
+        </marker>
+      </defs>
+
+      <!-- GROUND STATION -->
+      <rect x="20" y="200" width="130" height="70" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5" filter="url(#glow-c)"/>
+      <text x="85" y="225" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8" letter-spacing="1">GROUND</text>
+      <text x="85" y="240" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8" letter-spacing="1">STATION</text>
+      <text x="85" y="258" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Mission Planner</text>
+      <rect x="55" y="265" width="60" height="5" rx="2" fill="#00e5ff" opacity="0.15"/>
+
+      <!-- TELEMETRY LINK -->
+      <line x1="150" y1="235" x2="220" y2="235" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,3" class="wire-pulse" marker-end="url(#arrow-c)"/>
+      <text x="185" y="228" text-anchor="middle" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.7">433 MHz</text>
+
+      <!-- FLIGHT CONTROLLER (CENTER) -->
+      <rect x="220" y="175" width="180" height="120" rx="4" fill="#071425" stroke="#00e5ff" stroke-width="2" filter="url(#glow-c)"/>
+      <text x="310" y="203" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="9" font-weight="700" letter-spacing="2">PIXHAWK</text>
+      <text x="310" y="218" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">2.4.8</text>
+      <line x1="220" y1="228" x2="400" y2="228" stroke="#0d2137" stroke-width="1"/>
+      <text x="310" y="244" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">STM32F427 ARM Cortex-M4</text>
+      <text x="310" y="258" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">168 MHz | ArduCopter FW</text>
+      <text x="310" y="272" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">PWM + UART + I²C + SPI</text>
+
+      <!-- GPS MODULE - TOP -->
+      <rect x="320" y="60" width="110" height="65" rx="3" fill="#071425" stroke="#00ff88" stroke-width="1.5"/>
+      <text x="375" y="82" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="8" letter-spacing="1">M10 GPS</text>
+      <text x="375" y="96" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">u-blox M10 GNSS</text>
+      <text x="375" y="109" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">±2.5m | 10Hz Update</text>
+      <line x1="375" y1="125" x2="375" y2="175" stroke="#00ff88" stroke-width="1.5" marker-end="url(#arrow-g)" class="data-pulse"/>
+      <text x="385" y="155" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.7">UART</text>
+
+      <!-- POWER MODULE -->
+      <rect x="20" y="360" width="130" height="70" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="85" y="385" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">POWER</text>
+      <text x="85" y="398" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">MODULE 90A</text>
+      <text x="85" y="412" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">3S 4200mAh LiPo</text>
+      <text x="85" y="424" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">11.1V Nominal</text>
+      <line x1="150" y1="395" x2="220" y2="295" stroke="#ffb300" stroke-width="1.5" marker-end="url(#arrow-a)"/>
+      <text x="175" y="355" fill="#ffb300" font-family="Share Tech Mono" font-size="7" opacity="0.7">POWER</text>
+
+      <!-- ESC + MOTORS -->
+      <rect x="220" y="360" width="180" height="120" rx="4" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="310" y="384" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="8" letter-spacing="1">ESC + MOTORS</text>
+      <line x1="220" y1="394" x2="400" y2="394" stroke="#0d2137" stroke-width="1"/>
+      <text x="310" y="412" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">4× 30A ESC</text>
+      <text x="310" y="425" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">4× DJI-2212 920kV</text>
+      <text x="310" y="438" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">DJI 9405 Props</text>
+      <text x="310" y="451" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">S500 Carbon Frame</text>
+      <line x1="310" y1="360" x2="310" y2="295" stroke="#b44dff" stroke-width="1.5" marker-end="url(#arrow-p)"/>
+      <text x="320" y="328" fill="#b44dff" font-family="Share Tech Mono" font-size="7" opacity="0.7">PWM</text>
+
+      <!-- LIDAR -->
+      <rect x="470" y="200" width="130" height="70" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="535" y="224" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">VL53L0X</text>
+      <text x="535" y="237" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">LiDAR</text>
+      <text x="535" y="251" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">940nm ToF | 0-2m</text>
+      <text x="535" y="263" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">3% Accuracy</text>
+      <line x1="470" y1="235" x2="400" y2="235" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4,3" class="data-pulse" marker-end="url(#arrow-c)"/>
+      <text x="435" y="228" text-anchor="middle" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.7">I²C</text>
+
+      <!-- SMART PAYLOAD BOX -->
+      <rect x="470" y="310" width="180" height="130" rx="4" fill="#071425" stroke="#00ff88" stroke-width="2"/>
+      <text x="560" y="335" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="9" font-weight="700">SMART BOX</text>
+      <line x1="470" y1="345" x2="650" y2="345" stroke="#0d2137" stroke-width="1"/>
+      <text x="560" y="362" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">Arduino Nano ATmega328P</text>
+      <text x="560" y="375" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">10kg Load Cell + HX711</text>
+      <text x="560" y="388" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">Hall Effect Door Sensor</text>
+      <text x="560" y="401" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">SG90 Servo Motor</text>
+      <text x="560" y="414" text-anchor="middle" fill="#78909c" font-family="Share Tech Mono" font-size="7">Buzzer + Status LEDs</text>
+      <text x="560" y="427" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">2000mAh Aux Battery</text>
+      <!-- Connection to Pixhawk -->
+      <line x1="470" y1="375" x2="400" y2="270" stroke="#00ff88" stroke-width="1.5" stroke-dasharray="5,3" class="wire-pulse" marker-end="url(#arrow-g)"/>
+      <text x="435" y="330" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.7">UART/MAVLink</text>
+
+      <!-- MATEK PDB -->
+      <rect x="700" y="180" width="120" height="65" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="760" y="203" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">MATEK PDB</text>
+      <text x="760" y="218" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Power Distribution</text>
+      <text x="760" y="231" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">XT60 | 9-18V Input</text>
+      <line x1="700" y1="213" x2="650" y2="375" stroke="#ffb300" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="700" y1="213" x2="400" y2="213" stroke="#ffb300" stroke-width="1.5" marker-end="url(#arrow-a)"/>
+
+      <!-- TELEMETRY MODULE (on drone) -->
+      <rect x="700" y="310" width="120" height="65" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="760" y="334" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">TELEMETRY</text>
+      <text x="760" y="347" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="7">433 MHz Kit</text>
+      <text x="760" y="360" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">100mW | MAVLink</text>
+      <text x="760" y="373" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">10km LoS Range</text>
+      <line x1="700" y1="343" x2="400" y2="250" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,3" class="wire-pulse" marker-end="url(#arrow-c)"/>
+
+      <!-- LEGEND -->
+      <rect x="20" y="460" width="860" height="50" rx="2" fill="rgba(7,20,37,0.7)" stroke="#0d2137" stroke-width="1"/>
+      <text x="40" y="480" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.8">── ── WIRELESS</text>
+      <text x="140" y="480" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.8">——— MAVLink/UART</text>
+      <text x="260" y="480" fill="#ffb300" font-family="Share Tech Mono" font-size="7" opacity="0.8">——— POWER</text>
+      <text x="360" y="480" fill="#b44dff" font-family="Share Tech Mono" font-size="7" opacity="0.8">——— PWM CONTROL</text>
+      <text x="480" y="480" fill="#546e7a" font-family="Share Tech Mono" font-size="7">FLOODLINK AUTONOMOUS UAV — AIUB CAPSTONE PROJECT 2025-2026</text>
+
+      <text x="40" y="500" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.5">◉ ANIMATED LINES = ACTIVE DATA FLOW</text>
+    </svg>
+  </div>
+
+  <!-- SYSTEM PERFORMANCE BARS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" class="aos">
+    <div style="background:var(--bg-card);border:1px solid var(--border);padding:1.5rem;border-radius:4px;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1.2rem;">// SYSTEM SPECS</div>
+      <div class="perf-bar-container" data-val="74" data-color="#00e5ff">
+        <div class="perf-bar-label"><span>Cost Efficiency (vs full design)</span><span class="perf-val">74%</span></div>
+        <div class="perf-bar-track"><div class="perf-bar-fill" style="background:#00e5ff;"></div></div>
+      </div>
+      <div class="perf-bar-container" data-val="88" data-color="#00ff88">
+        <div class="perf-bar-label"><span>Autonomous Mission Success</span><span class="perf-val">88%</span></div>
+        <div class="perf-bar-track"><div class="perf-bar-fill" style="background:#00ff88;"></div></div>
+      </div>
+      <div class="perf-bar-container" data-val="99.8" data-color="#ffb300">
+        <div class="perf-bar-label"><span>Load Cell Accuracy</span><span class="perf-val">99.8%</span></div>
+        <div class="perf-bar-track"><div class="perf-bar-fill" style="background:#ffb300;"></div></div>
+      </div>
+      <div class="perf-bar-container" data-val="60" data-color="#b44dff">
+        <div class="perf-bar-label"><span>Flight Endurance (vs actual design)</span><span class="perf-val">60%</span></div>
+        <div class="perf-bar-track"><div class="perf-bar-fill" style="background:#b44dff;"></div></div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);padding:1.5rem;border-radius:4px;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);letter-spacing:3px;margin-bottom:1.2rem;">// KEY METRICS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div style="background:var(--bg-card2);padding:1rem;border-radius:3px;border:1px solid var(--border);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--cyan);margin-bottom:0.3rem;">1.15<span style="font-size:0.7rem">kg</span></div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">TOTAL WEIGHT</div>
+        </div>
+        <div style="background:var(--bg-card2);padding:1rem;border-radius:3px;border:1px solid var(--border);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--green);margin-bottom:0.3rem;">400<span style="font-size:0.7rem">g</span></div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">MAX PAYLOAD</div>
+        </div>
+        <div style="background:var(--bg-card2);padding:1rem;border-radius:3px;border:1px solid var(--border);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--amber);margin-bottom:0.3rem;">5<span style="font-size:0.7rem">m/s</span></div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">CRUISE SPEED</div>
+        </div>
+        <div style="background:var(--bg-card2);padding:1rem;border-radius:3px;border:1px solid var(--border);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--purple);margin-bottom:0.3rem;">42<span style="font-size:0.7rem">k</span></div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">TOTAL COST BDT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 2: BASE DRONE ===================== -->
+<section id="base-drone">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-info">
+      <div class="section-label">// LAYER 1 — FOUNDATION</div>
+      <h2 class="section-title">BASE DRONE SYSTEM</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <!-- TAB SYSTEM -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('flight-ctrl','base-tabs')">FLIGHT CONTROLLER</button>
+    <button class="tab-btn" onclick="switchTab('propulsion','base-tabs')">PROPULSION</button>
+    <button class="tab-btn" onclick="switchTab('power-sys','base-tabs')">POWER SYSTEM</button>
+    <button class="tab-btn" onclick="switchTab('nav-sys','base-tabs')">NAVIGATION</button>
+    <button class="tab-btn" onclick="switchTab('comm-sys','base-tabs')">COMMUNICATION</button>
+  </div>
+
+  <div id="base-tabs">
+    <!-- FLIGHT CONTROLLER -->
+    <div class="tab-panel active" id="flight-ctrl">
+      <div class="comp-grid">
+        <div class="comp-card" style="--card-accent:#00e5ff;--icon-bg:rgba(0,229,255,0.1);" onclick="openModal('pixhawk')">
+          <div class="comp-header">
+            <div class="comp-icon">🧠</div>
+            <div>
+              <div class="comp-name">FLIGHT CONTROLLER</div>
+              <div class="comp-model">PIXHAWK 2.4.8</div>
+            </div>
+          </div>
+          <p class="comp-desc">The central command unit. Runs ArduCopter firmware on an STM32F427 ARM Cortex-M4 at 168 MHz. Controls all autonomous flight operations including waypoint navigation, stabilization, and failsafe execution.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">STM32F427</span>
+            <span class="spec-tag">ARM Cortex-M4</span>
+            <span class="spec-tag">168 MHz</span>
+            <span class="spec-tag">FPU</span>
+            <span class="spec-tag">256KB SRAM</span>
+            <span class="spec-tag">2MB Flash</span>
+            <span class="spec-tag">ArduCopter</span>
+            <span class="spec-tag">MAVLink</span>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// ONBOARD SENSORS</div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem;">
+            <div style="display:flex;justify-content:space-between;padding:0.5rem;background:var(--bg-card2);border-radius:3px;">
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-secondary);">3-Axis Gyroscope</span>
+              <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cyan);">MPU-6000</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.5rem;background:var(--bg-card2);border-radius:3px;">
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-secondary);">Accelerometer</span>
+              <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cyan);">MPU-6000</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.5rem;background:var(--bg-card2);border-radius:3px;">
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-secondary);">Barometer</span>
+              <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cyan);">MS5611</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.5rem;background:var(--bg-card2);border-radius:3px;">
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-secondary);">Magnetometer</span>
+              <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cyan);">HMC5883L</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.5rem;background:var(--bg-card2);border-radius:3px;">
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-secondary);">PWM Outputs</span>
+              <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cyan);">8 Main + 6 Aux</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--amber);letter-spacing:3px;margin-bottom:1rem;">// FAILSAFE LOGIC</div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem;">
+            <div style="padding:0.6rem;background:rgba(255,179,0,0.05);border:1px solid rgba(255,179,0,0.2);border-radius:3px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--amber);margin-bottom:0.3rem;">BATTERY FAILSAFE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Below 9.5V → Return to Home automatically</div>
+            </div>
+            <div style="padding:0.6rem;background:rgba(255,179,0,0.05);border:1px solid rgba(255,179,0,0.2);border-radius:3px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--amber);margin-bottom:0.3rem;">LINK FAILSAFE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Telemetry loss → Continue mission or RTH</div>
+            </div>
+            <div style="padding:0.6rem;background:rgba(255,179,0,0.05);border:1px solid rgba(255,179,0,0.2);border-radius:3px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--amber);margin-bottom:0.3rem;">PAYLOAD FAILSAFE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Smart Box DISARM signal → Block takeoff</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROPULSION -->
+    <div class="tab-panel" id="propulsion">
+      <div class="comp-grid">
+        <div class="comp-card" style="--card-accent:#b44dff;--icon-bg:rgba(180,77,255,0.1);" onclick="openModal('motor')">
+          <div class="comp-header">
+            <div class="comp-icon">⚙️</div>
+            <div>
+              <div class="comp-name">BRUSHLESS MOTOR</div>
+              <div class="comp-model">DJI-2212 920kV × 4</div>
+            </div>
+          </div>
+          <p class="comp-desc">High-efficiency outrunner brushless motors providing the primary lift force. At 920kV, each motor spins at 920 RPM per volt applied, delivering stable thrust with low vibration.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">920 kV</span>
+            <span class="spec-tag">7.4-14.8V</span>
+            <span class="spec-tag">Max 2000g Thrust</span>
+            <span class="spec-tag">3-Phase BLDC</span>
+            <span class="spec-tag">Outrunner</span>
+          </div>
+        </div>
+
+        <div class="comp-card" style="--card-accent:#b44dff;--icon-bg:rgba(180,77,255,0.1);" onclick="openModal('esc')">
+          <div class="comp-header">
+            <div class="comp-icon">🔌</div>
+            <div>
+              <div class="comp-name">ELECTRONIC SPEED CTRL</div>
+              <div class="comp-model">30A ESC × 4</div>
+            </div>
+          </div>
+          <p class="comp-desc">Receives PWM signal from Pixhawk and modulates current to each motor via 3-phase switching. The 30A rating provides adequate headroom for peak loads during aggressive maneuvers.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">30A Continuous</span>
+            <span class="spec-tag">40A Peak</span>
+            <span class="spec-tag">2-4S LiPo</span>
+            <span class="spec-tag">BEC 5V/3A</span>
+            <span class="spec-tag">PWM Input</span>
+          </div>
+        </div>
+
+        <div class="comp-card" style="--card-accent:#b44dff;--icon-bg:rgba(180,77,255,0.1);">
+          <div class="comp-header">
+            <div class="comp-icon">🌀</div>
+            <div>
+              <div class="comp-name">PROPELLERS</div>
+              <div class="comp-model">DJI 9405 × 4 (2CW+2CCW)</div>
+            </div>
+          </div>
+          <p class="comp-desc">9.4-inch diameter, 4.5-inch pitch propellers. Counter-rotating pairs cancel torque reaction, eliminating yaw drift. Matched to the 920kV motors for maximum efficiency in the 3S voltage range.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">9.4" Diameter</span>
+            <span class="spec-tag">4.5" Pitch</span>
+            <span class="spec-tag">2 CW + 2 CCW</span>
+            <span class="spec-tag">CF Reinforced</span>
+          </div>
+        </div>
+
+        <div class="comp-card" style="--card-accent:#b44dff;--icon-bg:rgba(180,77,255,0.1);">
+          <div class="comp-header">
+            <div class="comp-icon">🦴</div>
+            <div>
+              <div class="comp-name">AIRFRAME</div>
+              <div class="comp-model">S500 Carbon Fiber Frame</div>
+            </div>
+          </div>
+          <p class="comp-desc">Cross-shaped carbon fiber quadcopter frame. 500mm diagonal wheelbase offers excellent balance between stability and agility. Carbon construction provides high strength-to-weight ratio.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">500mm Diagonal</span>
+            <span class="spec-tag">Carbon Fiber</span>
+            <span class="spec-tag">Shock-Absorbing Mounts</span>
+            <span class="spec-tag">Modular Arms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POWER -->
+    <div class="tab-panel" id="power-sys">
+      <div class="comp-grid">
+        <div class="comp-card" style="--card-accent:#ffb300;--icon-bg:rgba(255,179,0,0.1);" onclick="openModal('battery')">
+          <div class="comp-header">
+            <div class="comp-icon">🔋</div>
+            <div>
+              <div class="comp-name">MAIN BATTERY</div>
+              <div class="comp-model">3S 4200mAh LiPo</div>
+            </div>
+          </div>
+          <p class="comp-desc">3-cell lithium polymer battery delivering 11.1V nominal. The 4200mAh capacity provides adequate energy for multiple test flights. High C-rate ensures voltage stability under peak motor loads.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">3S / 11.1V</span>
+            <span class="spec-tag">4200 mAh</span>
+            <span class="spec-tag">25C Discharge</span>
+            <span class="spec-tag">XT60 Connector</span>
+            <span class="spec-tag">~200g Weight</span>
+          </div>
+        </div>
+
+        <div class="comp-card" style="--card-accent:#ffb300;--icon-bg:rgba(255,179,0,0.1);">
+          <div class="comp-header">
+            <div class="comp-icon">⚡</div>
+            <div>
+              <div class="comp-name">POWER MODULE</div>
+              <div class="comp-model">90A Current Sensor</div>
+            </div>
+          </div>
+          <p class="comp-desc">Passes main battery power to PDB while feeding regulated 5V to Pixhawk. Continuously monitors battery voltage and current draw, transmitting data to Pixhawk for battery failsafe triggers.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">90A Max</span>
+            <span class="spec-tag">2-6S Input</span>
+            <span class="spec-tag">5V/3A BEC Out</span>
+            <span class="spec-tag">Voltage Sensor</span>
+            <span class="spec-tag">Current Sensor</span>
+          </div>
+        </div>
+
+        <div class="comp-card" style="--card-accent:#ffb300;--icon-bg:rgba(255,179,0,0.1);">
+          <div class="comp-header">
+            <div class="comp-icon">🔆</div>
+            <div>
+              <div class="comp-name">POWER DISTRIBUTION</div>
+              <div class="comp-model">MATEK PDB-XT60</div>
+            </div>
+          </div>
+          <p class="comp-desc">Central power distribution hub connecting battery to all four ESCs. Integrated voltage regulators provide clean 5V and 12V rails for peripheral electronics. XT60 input ensures secure high-current connection.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">XT60 Input</span>
+            <span class="spec-tag">4× ESC Outputs</span>
+            <span class="spec-tag">5V/2A BEC</span>
+            <span class="spec-tag">12V/0.5A BEC</span>
+            <span class="spec-tag">9-18V Input</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="tab-panel" id="nav-sys">
+      <div class="comp-grid">
+        <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);" onclick="openModal('gps')">
+          <div class="comp-header">
+            <div class="comp-icon">🛰️</div>
+            <div>
+              <div class="comp-name">GNSS MODULE</div>
+              <div class="comp-model">M10 GPS (u-blox M10)</div>
+            </div>
+          </div>
+          <p class="comp-desc">Multi-constellation GNSS receiver tracking GPS, GLONASS, BeiDou, Galileo, and SBAS simultaneously. Tracks up to 32 satellites with 10Hz position update rate for precise waypoint navigation.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">u-blox M10</span>
+            <span class="spec-tag">GPS+GLONASS+BeiDou</span>
+            <span class="spec-tag">Galileo+SBAS</span>
+            <span class="spec-tag">±2.5m CEP</span>
+            <span class="spec-tag">10Hz Update</span>
+            <span class="spec-tag">115200 baud UART</span>
+            <span class="spec-tag">Built-in Compass</span>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);letter-spacing:3px;margin-bottom:1rem;">// NAVIGATION MODES</div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <div style="padding:0.6rem 0.8rem;background:rgba(0,255,136,0.05);border-left:3px solid var(--green);border-radius:2px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--green);">GUIDED MODE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.2rem;">Autonomous waypoint following. Primary flight mode used in all delivery missions.</div>
+            </div>
+            <div style="padding:0.6rem 0.8rem;background:rgba(0,229,255,0.05);border-left:3px solid var(--cyan);border-radius:2px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--cyan);">LOITER MODE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.2rem;">GPS-assisted hover in place. Used during payload delivery hold.</div>
+            </div>
+            <div style="padding:0.6rem 0.8rem;background:rgba(255,179,0,0.05);border-left:3px solid var(--amber);border-radius:2px;">
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--amber);">RTL MODE</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.2rem;">Return to Launch after delivery. Triggered by Pixhawk or Smart Box command.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMUNICATION -->
+    <div class="tab-panel" id="comm-sys">
+      <div class="comp-grid">
+        <div class="comp-card" style="--card-accent:#00e5ff;--icon-bg:rgba(0,229,255,0.1);" onclick="openModal('telemetry')">
+          <div class="comp-header">
+            <div class="comp-icon">📡</div>
+            <div>
+              <div class="comp-name">TELEMETRY RADIO</div>
+              <div class="comp-model">433 MHz SiK Radio Kit</div>
+            </div>
+          </div>
+          <p class="comp-desc">Full-duplex 433 MHz wireless link between drone and ground station. Uses adaptive time-division multiplexing for simultaneous up/downlink. MAVLink protocol with error correction maintains link integrity over distance.</p>
+          <div class="comp-specs">
+            <span class="spec-tag">433 MHz</span>
+            <span class="spec-tag">100 mW (20dBm)</span>
+            <span class="spec-tag">250 kbps Max</span>
+            <span class="spec-tag">MAVLink v2</span>
+            <span class="spec-tag">10km LoS Range</span>
+            <span class="spec-tag">FEC Error Correction</span>
+            <span class="spec-tag">ATDM Protocol</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 3: OBSTACLE AVOIDANCE ===================== -->
+<section id="obstacle">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-info">
+      <div class="section-label">// LAYER 2 — SENSING</div>
+      <h2 class="section-title">OBSTACLE AVOIDANCE SYSTEM</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <div class="comp-grid aos">
+    <div class="comp-card" style="--card-accent:#00e5ff;--icon-bg:rgba(0,229,255,0.1);" onclick="openModal('lidar')">
+      <div class="comp-header">
+        <div class="comp-icon">📏</div>
+        <div>
+          <div class="comp-name">TIME-OF-FLIGHT LiDAR</div>
+          <div class="comp-model">VL53L0X V2</div>
+        </div>
+      </div>
+      <p class="comp-desc">Laser-based distance sensor using 940nm infrared Time-of-Flight technology. Measures distance by calculating round-trip time of laser pulses. Mounted downward-facing for precision altitude control during landing, and forward-facing for proximity detection.</p>
+      <div class="comp-specs">
+        <span class="spec-tag">940nm IR Laser</span>
+        <span class="spec-tag">30mm – 2000mm</span>
+        <span class="spec-tag">±3% Accuracy</span>
+        <span class="spec-tag">25° FOV</span>
+        <span class="spec-tag">I²C Interface</span>
+        <span class="spec-tag">2.6-3.5V Supply</span>
+        <span class="spec-tag">~19mA Active</span>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;grid-column:span 2;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1.5rem;">// LiDAR SIGNAL CHAIN & INTEGRATION</div>
+      <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;">
+        <div style="background:var(--bg-card2);border:1px solid rgba(0,229,255,0.3);border-radius:3px;padding:0.8rem 1.2rem;text-align:center;min-width:120px;">
+          <div style="font-size:1.2rem;margin-bottom:0.3rem;">🏔️</div>
+          <div style="font-family:var(--font-display);font-size:0.65rem;color:var(--cyan);letter-spacing:1px;">OBSTACLE</div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">Surface / Ground</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--cyan);letter-spacing:1px;">940nm IR</div>
+          <div style="width:60px;height:2px;background:linear-gradient(to right,var(--cyan),transparent);position:relative;">
+            <div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);border-left:5px solid var(--cyan);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+          </div>
+          <div style="width:60px;height:2px;background:linear-gradient(to left,var(--cyan),transparent);position:relative;margin-top:4px;">
+            <div style="position:absolute;left:-4px;top:50%;transform:translateY(-50%);border-right:5px solid var(--cyan);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--cyan);letter-spacing:1px;">REFLECT</div>
+        </div>
+        <div style="background:var(--bg-card2);border:1px solid rgba(0,229,255,0.3);border-radius:3px;padding:0.8rem 1.2rem;text-align:center;min-width:120px;">
+          <div style="font-size:1.2rem;margin-bottom:0.3rem;">📡</div>
+          <div style="font-family:var(--font-display);font-size:0.65rem;color:var(--cyan);letter-spacing:1px;">VL53L0X</div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">ToF Calculation</div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--cyan);margin-top:0.2rem;">d = c·t/2</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--green);letter-spacing:1px;">I²C DATA</div>
+          <div style="width:60px;height:2px;background:linear-gradient(to right,var(--green),var(--green));position:relative;">
+            <div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);border-left:5px solid var(--green);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--text-dim);">SDA/SCL</div>
+        </div>
+        <div style="background:var(--bg-card2);border:1px solid rgba(0,229,255,0.3);border-radius:3px;padding:0.8rem 1.2rem;text-align:center;min-width:120px;">
+          <div style="font-size:1.2rem;margin-bottom:0.3rem;">🧠</div>
+          <div style="font-family:var(--font-display);font-size:0.65rem;color:var(--cyan);letter-spacing:1px;">PIXHAWK</div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">Rangefinder Input</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;">
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--amber);letter-spacing:1px;">PWM SIGNAL</div>
+          <div style="width:60px;height:2px;background:linear-gradient(to right,var(--amber),var(--amber));position:relative;">
+            <div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);border-left:5px solid var(--amber);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--text-dim);">THROTTLE ADJ</div>
+        </div>
+        <div style="background:var(--bg-card2);border:1px solid rgba(255,179,0,0.3);border-radius:3px;padding:0.8rem 1.2rem;text-align:center;min-width:120px;">
+          <div style="font-size:1.2rem;margin-bottom:0.3rem;">⚙️</div>
+          <div style="font-family:var(--font-display);font-size:0.65rem;color:var(--amber);letter-spacing:1px;">ESC/MOTORS</div>
+          <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);">Altitude Control</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCURACY VISUALIZATION -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1.2rem;">// MEASURED ACCURACY (0.1787% STD DEV)</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);width:60px;">0.1m</span>
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:98%;height:100%;background:linear-gradient(to right,var(--green),var(--cyan));border-radius:4px;"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);">1.2% err</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);width:60px;">0.5m</span>
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:97%;height:100%;background:linear-gradient(to right,var(--green),var(--cyan));border-radius:4px;"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);">2.1% err</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);width:60px;">1.0m</span>
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:97.5%;height:100%;background:linear-gradient(to right,var(--green),var(--cyan));border-radius:4px;"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);">2.5% err</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);width:60px;">1.5m</span>
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:96%;height:100%;background:linear-gradient(to right,var(--cyan),var(--amber));border-radius:4px;"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--amber);">3.8% err</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);width:60px;">2.0m</span>
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:95%;height:100%;background:linear-gradient(to right,var(--amber),var(--red));border-radius:4px;"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--amber);">4.9% err</span>
+        </div>
+      </div>
+      <div style="margin-top:1rem;font-family:var(--font-mono);font-size:0.62rem;color:var(--text-dim);">Max absolute error: 1.4g / MAPE: 0.1129%</div>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--red);letter-spacing:3px;margin-bottom:1rem;">// CURRENT LIMITATIONS</div>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;">
+        <div style="padding:0.6rem;background:rgba(255,61,61,0.05);border:1px solid rgba(255,61,61,0.2);border-radius:3px;">
+          <div style="font-size:0.82rem;color:var(--text-secondary);">⚠ 2m maximum range — insufficient for high-altitude obstacle detection</div>
+        </div>
+        <div style="padding:0.6rem;background:rgba(255,61,61,0.05);border:1px solid rgba(255,61,61,0.2);border-radius:3px;">
+          <div style="font-size:0.82rem;color:var(--text-secondary);">⚠ Single-direction sensing — blind spots around drone body</div>
+        </div>
+        <div style="padding:0.6rem;background:rgba(255,61,61,0.05);border:1px solid rgba(255,61,61,0.2);border-radius:3px;">
+          <div style="font-size:0.82rem;color:var(--text-secondary);">⚠ Performance degrades in rain, fog, and heavy dust</div>
+        </div>
+        <div style="padding:0.6rem;background:rgba(255,61,61,0.05);border:1px solid rgba(255,61,61,0.2);border-radius:3px;">
+          <div style="font-size:0.82rem;color:var(--text-secondary);">⚠ No visual obstacle classification — cannot distinguish type</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 4: PAYLOAD SYSTEM ===================== -->
+<section id="payload">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-info">
+      <div class="section-label">// LAYER 3 — SMART PAYLOAD</div>
+      <h2 class="section-title">SMART PAYLOAD BOX SYSTEM</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2rem;margin-bottom:3rem;" class="aos">
+    <!-- LEFT: Components -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);" onclick="openModal('arduino')">
+        <div class="comp-header">
+          <div class="comp-icon">💻</div>
+          <div>
+            <div class="comp-name">MICROCONTROLLER</div>
+            <div class="comp-model">Arduino Nano (ATmega328P)</div>
+          </div>
+        </div>
+        <p class="comp-desc">Central processor of the Smart Payload Box. Reads all sensor data, executes safety logic, controls actuators, and communicates ARM/DISARM status to Pixhawk via MAVLink over UART.</p>
+        <div class="comp-specs">
+          <span class="spec-tag">ATmega328P</span>
+          <span class="spec-tag">16 MHz</span>
+          <span class="spec-tag">32KB Flash</span>
+          <span class="spec-tag">2KB SRAM</span>
+          <span class="spec-tag">14 GPIO</span>
+          <span class="spec-tag">6 ADC</span>
+          <span class="spec-tag">UART/I²C/SPI</span>
+        </div>
+      </div>
+
+      <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);" onclick="openModal('loadcell')">
+        <div class="comp-header">
+          <div class="comp-icon">⚖️</div>
+          <div>
+            <div class="comp-name">LOAD CELL + ADC</div>
+            <div class="comp-model">10kg Cell + HX711 24-bit</div>
+          </div>
+        </div>
+        <p class="comp-desc">Strain-gauge load cell converts weight to microvolts. HX711 24-bit ADC amplifies and digitizes the signal with programmable gain (32/64/128). Achieves 0.1129% MAPE across 50g–1000g range.</p>
+        <div class="comp-specs">
+          <span class="spec-tag">10kg Capacity</span>
+          <span class="spec-tag">24-bit ADC</span>
+          <span class="spec-tag">Wheatstone Bridge</span>
+          <span class="spec-tag">±0.345g Abs Error</span>
+          <span class="spec-tag">2-Wire SPI</span>
+        </div>
+      </div>
+
+      <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);" onclick="openModal('hall')">
+        <div class="comp-header">
+          <div class="comp-icon">🔒</div>
+          <div>
+            <div class="comp-name">DOOR SENSOR</div>
+            <div class="comp-model">Hall Effect Sensor</div>
+          </div>
+        </div>
+        <p class="comp-desc">Non-contact magnetic field sensor detects door open/closed state. Magnet mounted on door; sensor on frame. Provides clean digital HIGH/LOW output without mechanical contact — no wear, no false triggers.</p>
+        <div class="comp-specs">
+          <span class="spec-tag">Non-Contact</span>
+          <span class="spec-tag">Digital Output</span>
+          <span class="spec-tag">5V Logic</span>
+          <span class="spec-tag">Magnetic Field</span>
+        </div>
+      </div>
+
+      <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);" onclick="openModal('servo')">
+        <div class="comp-header">
+          <div class="comp-icon">🔧</div>
+          <div>
+            <div class="comp-name">DOOR ACTUATOR</div>
+            <div class="comp-model">SG90 Micro Servo Motor</div>
+          </div>
+        </div>
+        <p class="comp-desc">PWM-controlled servo manages physical door locking/unlocking. Rotates to 0° (closed/locked) or 90° (open/delivery). Feedback-controlled position ensures repeatable door action without stall.</p>
+        <div class="comp-specs">
+          <span class="spec-tag">4.8–6V Supply</span>
+          <span class="spec-tag">180° Range</span>
+          <span class="spec-tag">PWM Control</span>
+          <span class="spec-tag">1.8kg·cm Torque</span>
+          <span class="spec-tag">~9g Weight</span>
+        </div>
+      </div>
+
+      <div class="comp-card" style="--card-accent:#00ff88;--icon-bg:rgba(0,255,136,0.1);">
+        <div class="comp-header">
+          <div class="comp-icon">🔊</div>
+          <div>
+            <div class="comp-name">ALERT BUZZER</div>
+            <div class="comp-model">Piezo Buzzer 5V</div>
+          </div>
+        </div>
+        <p class="comp-desc">Audible alert system activated during safety check failures. Signals overweight condition, door open state, or low battery. Allows ground operators to identify issues without visual interface.</p>
+        <div class="comp-specs">
+          <span class="spec-tag">5V Supply</span>
+          <span class="spec-tag">Low Current</span>
+          <span class="spec-tag">Digital Trigger</span>
+          <span class="spec-tag">Audible Alarm</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Logic Flow -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-glow);border-radius:4px;padding:2rem;position:relative;overflow:hidden;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);letter-spacing:3px;margin-bottom:2rem;">// SAFETY LOGIC FLOWCHART</div>
+
+      <div class="payload-flow-grid">
+        <div class="pf-node pf-normal">⚡ SYSTEM START & SENSOR INIT</div>
+        <div class="pf-arrow" style="--arrow-col:var(--cyan);"></div>
+        <div class="pf-node pf-normal">⚖️ MEASURE PAYLOAD WEIGHT (Load Cell)</div>
+        <div class="pf-arrow" style="--arrow-col:var(--amber);"></div>
+
+        <div class="pf-row">
+          <div></div>
+          <div class="pf-node pf-decision" style="clip-path:none;padding:0.8rem 1.5rem;transform:none;">WEIGHT<br>> LIMIT?</div>
+          <div style="display:flex;align-items:center;">
+            <div class="pf-side-arrow"></div>
+            <div class="pf-node pf-alert" style="margin-left:0.5rem;">🚨 BUZZER + DISARM</div>
+          </div>
+        </div>
+
+        <div class="pf-arrow" style="--arrow-col:var(--amber);"></div>
+
+        <div class="pf-row">
+          <div></div>
+          <div class="pf-node pf-decision" style="clip-path:none;padding:0.8rem 1.5rem;transform:none;">BATTERY<br>>= 40%?</div>
+          <div style="display:flex;align-items:center;">
+            <div class="pf-side-arrow"></div>
+            <div class="pf-node pf-alert" style="margin-left:0.5rem;">🚨 BUZZER + DISARM</div>
+          </div>
+        </div>
+
+        <div class="pf-arrow" style="--arrow-col:var(--amber);"></div>
+
+        <div class="pf-row">
+          <div></div>
+          <div class="pf-node pf-decision" style="clip-path:none;padding:0.8rem 1.5rem;transform:none;">DOOR<br>LOCKED?</div>
+          <div style="display:flex;align-items:center;">
+            <div class="pf-side-arrow"></div>
+            <div class="pf-node pf-alert" style="margin-left:0.5rem;">🚨 BUZZER + DISARM</div>
+          </div>
+        </div>
+
+        <div class="pf-arrow" style="--arrow-col:var(--green);"></div>
+        <div class="pf-node pf-success">✅ SEND ARM → PIXHAWK</div>
+        <div class="pf-arrow" style="--arrow-col:var(--green);"></div>
+        <div class="pf-node pf-normal">🛫 MISSION EXECUTES — DOOR STAYS LOCKED</div>
+        <div class="pf-arrow" style="--arrow-col:var(--cyan);"></div>
+        <div class="pf-node pf-success">📍 WAYPOINT REACHED — DOOR UNLOCKS</div>
+        <div class="pf-arrow" style="--arrow-col:var(--cyan);"></div>
+        <div class="pf-node pf-normal">📦 DELIVERY COMPLETE → RTL COMMAND</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WIRING DIAGRAM -->
+  <div class="wiring-svg-container aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--green);letter-spacing:3px;margin-bottom:1.5rem;">// SMART PAYLOAD BOX — INTERNAL WIRING</div>
+    <svg viewBox="0 0 820 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:820px;display:block;margin:auto;">
+      <defs>
+        <filter id="g2"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <!-- Arduino Nano (CENTER) -->
+      <rect x="300" y="150" width="160" height="120" rx="4" fill="#071425" stroke="#00ff88" stroke-width="2" filter="url(#g2)"/>
+      <text x="380" y="178" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="9" font-weight="700">ARDUINO</text>
+      <text x="380" y="193" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="8">NANO</text>
+      <line x1="300" y1="203" x2="460" y2="203" stroke="#0d2137"/>
+      <text x="380" y="220" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">ATmega328P 16MHz</text>
+      <text x="380" y="234" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">D2-D13, A0-A7 Pins</text>
+      <text x="380" y="248" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">5V / 3.3V / GND Rails</text>
+
+      <!-- HX711 -->
+      <rect x="40" y="60" width="130" height="80" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="105" y="85" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">HX711</text>
+      <text x="105" y="99" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">24-bit ADC</text>
+      <text x="105" y="112" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">DOUT → D6</text>
+      <text x="105" y="125" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">SCK  → D5</text>
+      <!-- HX711 to Arduino -->
+      <line x1="170" y1="100" x2="300" y2="185" stroke="#ffb300" stroke-width="1.5" class="data-pulse" marker-end="url(#arrow-a)"/>
+      <text x="230" y="150" fill="#ffb300" font-family="Share Tech Mono" font-size="7" opacity="0.8">2-Wire SPI</text>
+
+      <!-- 10kg Load Cell -->
+      <rect x="40" y="190" width="130" height="65" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="105" y="215" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">10kg LOAD</text>
+      <text x="105" y="228" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">CELL</text>
+      <text x="105" y="243" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">E+,E-,A+,A-,B+,B-</text>
+      <!-- Load Cell to HX711 -->
+      <line x1="105" y1="190" x2="105" y2="140" stroke="#ffb300" stroke-width="1.5" marker-end="url(#arrow-a)"/>
+      <text x="115" y="168" fill="#ffb300" font-family="Share Tech Mono" font-size="7">Wheatstone</text>
+
+      <!-- Hall Sensor -->
+      <rect x="620" y="60" width="130" height="70" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="685" y="85" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">HALL EFFECT</text>
+      <text x="685" y="98" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">SENSOR</div>
+      <text x="685" y="114" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">OUTPUT → D3</text>
+      <!-- Hall to Arduino -->
+      <line x1="620" y1="95" x2="460" y2="185" stroke="#00e5ff" stroke-width="1.5" class="data-pulse" marker-end="url(#arrow-c)"/>
+      <text x="535" y="140" fill="#00e5ff" font-family="Share Tech Mono" font-size="7">Digital Signal</text>
+
+      <!-- Servo -->
+      <rect x="620" y="170" width="130" height="65" rx="3" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="685" y="195" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="8">SG90 SERVO</text>
+      <text x="685" y="210" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">SIGNAL → D9</text>
+      <text x="685" y="224" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">VCC 5V / GND</text>
+      <!-- Servo from Arduino -->
+      <line x1="460" y1="210" x2="620" y2="203" stroke="#b44dff" stroke-width="1.5" class="wire-pulse" marker-end="url(#arrow-p)"/>
+      <text x="535" y="200" fill="#b44dff" font-family="Share Tech Mono" font-size="7">PWM D9</text>
+
+      <!-- Buzzer -->
+      <rect x="620" y="280" width="130" height="65" rx="3" fill="#071425" stroke="#ff3d3d" stroke-width="1.5"/>
+      <text x="685" y="308" text-anchor="middle" fill="#ff3d3d" font-family="Orbitron" font-size="8">BUZZER</text>
+      <text x="685" y="322" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">SIGNAL → D8</text>
+      <text x="685" y="336" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">5V Active</text>
+      <line x1="460" y1="240" x2="620" y2="313" stroke="#ff3d3d" stroke-width="1.5" class="wire-pulse" marker-end="url(#arrow-c)"/>
+      <text x="535" y="280" fill="#ff3d3d" font-family="Share Tech Mono" font-size="7" opacity="0.7">D8</text>
+
+      <!-- Battery (Aux) -->
+      <rect x="300" y="20" width="160" height="65" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="380" y="45" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8">AUX BATTERY</text>
+      <text x="380" y="58" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="7">2000mAh LiPo</text>
+      <text x="380" y="71" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">VCC → VIN | A0 Monitor</text>
+      <line x1="380" y1="85" x2="380" y2="150" stroke="#ffb300" stroke-width="2" marker-end="url(#arrow-a)"/>
+
+      <!-- Pixhawk connection -->
+      <rect x="300" y="320" width="160" height="55" rx="3" fill="#071425" stroke="#00ff88" stroke-width="1.5"/>
+      <text x="380" y="344" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="8">PIXHAWK 2.4.8</text>
+      <text x="380" y="358" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">RX → TX (D1)</text>
+      <text x="380" y="371" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">MAVLink ARM/DISARM</text>
+      <line x1="380" y1="270" x2="380" y2="320" stroke="#00ff88" stroke-width="2" class="data-pulse" marker-end="url(#arrow-g)"/>
+      <text x="390" y="298" fill="#00ff88" font-family="Share Tech Mono" font-size="7">UART TX/RX</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ===================== SECTION 5: FULL WIRING ===================== -->
+<section id="wiring">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-info">
+      <div class="section-label">// COMPLETE SYSTEM</div>
+      <h2 class="section-title">FULL DRONE WIRING DIAGRAM</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <div class="wiring-svg-container aos" style="overflow-x:auto;">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1.5rem;">// POWER + SIGNAL INTERCONNECT — ALL SYSTEMS</div>
+    <svg viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:800px;max-width:1100px;display:block;margin:auto;">
+      <defs>
+        <filter id="g3"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="aw-c" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00e5ff" opacity="0.8"/></marker>
+        <marker id="aw-g" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00ff88" opacity="0.8"/></marker>
+        <marker id="aw-a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ffb300" opacity="0.8"/></marker>
+        <marker id="aw-p" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#b44dff" opacity="0.8"/></marker>
+        <marker id="aw-r" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ff3d3d" opacity="0.8"/></marker>
+      </defs>
+
+      <!-- === MAIN BATTERY === -->
+      <rect x="440" y="10" width="180" height="55" rx="3" fill="#071425" stroke="#ffb300" stroke-width="2" filter="url(#g3)"/>
+      <text x="530" y="32" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="9" font-weight="700">MAIN BATTERY</text>
+      <text x="530" y="47" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">3S 4200mAh LiPo | 11.1V Nominal</text>
+
+      <!-- Battery → Power Module -->
+      <line x1="530" y1="65" x2="530" y2="100" stroke="#ffb300" stroke-width="2.5" marker-end="url(#aw-a)"/>
+      <text x="540" y="87" fill="#ffb300" font-family="Share Tech Mono" font-size="7">XT60</text>
+
+      <!-- === POWER MODULE === -->
+      <rect x="390" y="100" width="280" height="60" rx="3" fill="#071425" stroke="#ffb300" stroke-width="2"/>
+      <text x="530" y="124" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="9" font-weight="700">POWER MODULE 90A</text>
+      <text x="530" y="140" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Voltage + Current Monitor → Pixhawk | 5V BEC Output</text>
+
+      <!-- Power Module → MATEK PDB -->
+      <line x1="460" y1="160" x2="300" y2="220" stroke="#ffb300" stroke-width="2" marker-end="url(#aw-a)"/>
+      <text x="360" y="192" fill="#ffb300" font-family="Share Tech Mono" font-size="7" opacity="0.8">XT60 Power</text>
+
+      <!-- Power Module → Pixhawk (5V BEC) -->
+      <line x1="600" y1="160" x2="700" y2="220" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#aw-c)"/>
+      <text x="650" y="196" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.7">5V/GND</text>
+
+      <!-- === MATEK PDB === -->
+      <rect x="160" y="220" width="220" height="60" rx="3" fill="#071425" stroke="#ffb300" stroke-width="1.5"/>
+      <text x="270" y="243" text-anchor="middle" fill="#ffb300" font-family="Orbitron" font-size="8" font-weight="700">MATEK PDB-XT60</text>
+      <text x="270" y="258" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Power Distribution | 5V + 12V BEC Rails</text>
+
+      <!-- PDB → 4 ESCs -->
+      <line x1="190" y1="280" x2="60" y2="350" stroke="#b44dff" stroke-width="2" marker-end="url(#aw-p)"/>
+      <line x1="230" y1="280" x2="130" y2="360" stroke="#b44dff" stroke-width="2" marker-end="url(#aw-p)"/>
+      <line x1="310" y1="280" x2="350" y2="350" stroke="#b44dff" stroke-width="2" marker-end="url(#aw-p)"/>
+      <line x1="350" y1="280" x2="410" y2="352" stroke="#b44dff" stroke-width="2" marker-end="url(#aw-p)"/>
+      <text x="200" y="322" fill="#b44dff" font-family="Share Tech Mono" font-size="7" opacity="0.7">POWER TO ESCs</text>
+
+      <!-- ESC 1 -->
+      <rect x="20" y="350" width="100" height="55" rx="3" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="70" y="370" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="7">ESC #1</text>
+      <text x="70" y="383" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">30A Front-Left</text>
+      <text x="70" y="396" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Motor FL</text>
+
+      <!-- ESC 2 -->
+      <rect x="130" y="360" width="100" height="55" rx="3" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="180" y="382" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="7">ESC #2</text>
+      <text x="180" y="395" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">30A Front-Right</text>
+      <text x="180" y="408" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Motor FR</text>
+
+      <!-- ESC 3 -->
+      <rect x="310" y="350" width="100" height="55" rx="3" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="360" y="370" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="7">ESC #3</text>
+      <text x="360" y="383" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">30A Rear-Left</text>
+      <text x="360" y="396" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Motor RL</text>
+
+      <!-- ESC 4 -->
+      <rect x="420" y="352" width="100" height="55" rx="3" fill="#071425" stroke="#b44dff" stroke-width="1.5"/>
+      <text x="470" y="372" text-anchor="middle" fill="#b44dff" font-family="Orbitron" font-size="7">ESC #4</text>
+      <text x="470" y="385" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">30A Rear-Right</text>
+      <text x="470" y="398" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Motor RR</text>
+
+      <!-- === PIXHAWK (Center-Right) === -->
+      <rect x="650" y="220" width="200" height="130" rx="4" fill="#071425" stroke="#00e5ff" stroke-width="2.5" filter="url(#g3)"/>
+      <text x="750" y="248" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="10" font-weight="700">PIXHAWK</text>
+      <text x="750" y="263" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">2.4.8</text>
+      <line x1="650" y1="273" x2="850" y2="273" stroke="#0d2137"/>
+      <text x="750" y="290" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">MAIN OUT: PWM 1-4 → ESC</text>
+      <text x="750" y="303" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">GPS: UART2 (115200 baud)</text>
+      <text x="750" y="316" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">TELEM1: 433MHz Radio</text>
+      <text x="750" y="329" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">TELEM2: Smart Box UART</text>
+      <text x="750" y="342" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">I²C: VL53L0X LiDAR</text>
+
+      <!-- Pixhawk → ESC (PWM) -->
+      <line x1="650" y1="300" x2="420" y2="370" stroke="#b44dff" stroke-width="1.5" stroke-dasharray="5,3" class="wire-pulse" marker-end="url(#aw-p)"/>
+      <line x1="650" y1="300" x2="310" y2="365" stroke="#b44dff" stroke-width="1.5" stroke-dasharray="5,3" class="wire-pulse" marker-end="url(#aw-p)"/>
+      <line x1="650" y1="300" x2="230" y2="365" stroke="#b44dff" stroke-width="1.5" stroke-dasharray="5,3" class="wire-pulse" marker-end="url(#aw-p)"/>
+      <line x1="650" y1="300" x2="120" y2="360" stroke="#b44dff" stroke-width="1.5" stroke-dasharray="5,3" class="wire-pulse" marker-end="url(#aw-p)"/>
+      <text x="520" y="295" fill="#b44dff" font-family="Share Tech Mono" font-size="7" opacity="0.7">PWM SIGNALS</text>
+
+      <!-- === GPS MODULE === -->
+      <rect x="800" y="50" width="150" height="60" rx="3" fill="#071425" stroke="#00ff88" stroke-width="1.5"/>
+      <text x="875" y="73" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="8">M10 GPS</text>
+      <text x="875" y="87" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">UART2 | 115200 baud</text>
+      <text x="875" y="100" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">VCC 5V / GND</text>
+      <line x1="875" y1="110" x2="800" y2="230" stroke="#00ff88" stroke-width="1.5" class="data-pulse" marker-end="url(#aw-g)"/>
+      <text x="850" y="168" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.7">UART</text>
+
+      <!-- === TELEMETRY RADIO === -->
+      <rect x="950" y="220" width="130" height="70" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="1015" y="245" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">433 MHz</text>
+      <text x="1015" y="258" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">TELEMETRY</text>
+      <text x="1015" y="273" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">TELEM1 | 57600 baud</text>
+      <line x1="950" y1="255" x2="850" y2="285" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4,3" class="wire-pulse" marker-end="url(#aw-c)"/>
+
+      <!-- === VL53L0X LIDAR === -->
+      <rect x="950" y="340" width="130" height="70" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="1015" y="364" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">VL53L0X</text>
+      <text x="1015" y="377" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">LiDAR</text>
+      <text x="1015" y="392" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">I²C | SDA/SCL</text>
+      <line x1="950" y1="375" x2="850" y2="330" stroke="#00e5ff" stroke-width="1.5" class="data-pulse" marker-end="url(#aw-c)"/>
+      <text x="895" y="360" fill="#00e5ff" font-family="Share Tech Mono" font-size="7" opacity="0.7">I²C</text>
+
+      <!-- === SMART PAYLOAD BOX === -->
+      <rect x="600" y="470" width="220" height="80" rx="3" fill="#071425" stroke="#00ff88" stroke-width="2"/>
+      <text x="710" y="496" text-anchor="middle" fill="#00ff88" font-family="Orbitron" font-size="9" font-weight="700">SMART BOX</text>
+      <text x="710" y="511" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Arduino Nano | Load Cell | Hall | Servo</text>
+      <text x="710" y="525" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Buzzer | Aux 2000mAh Battery</text>
+      <line x1="710" y1="470" x2="750" y2="350" stroke="#00ff88" stroke-width="1.5" class="data-pulse" marker-end="url(#aw-g)"/>
+      <text x="740" y="415" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.8">TELEM2/UART</text>
+      <text x="740" y="427" fill="#00ff88" font-family="Share Tech Mono" font-size="7" opacity="0.8">MAVLink ARM</text>
+
+      <!-- === GROUND STATION === -->
+      <rect x="20" y="490" width="160" height="65" rx="3" fill="#071425" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="100" y="515" text-anchor="middle" fill="#00e5ff" font-family="Orbitron" font-size="8">GROUND STATION</text>
+      <text x="100" y="528" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">Mission Planner / QGroundControl</text>
+      <text x="100" y="541" text-anchor="middle" fill="#546e7a" font-family="Share Tech Mono" font-size="7">USB → 433MHz Air Unit</text>
+      <!-- Wireless link -->
+      <line x1="180" y1="523" x2="950" y2="255" stroke="#00e5ff" stroke-width="1" stroke-dasharray="8,5" class="wire-pulse" opacity="0.5" marker-end="url(#aw-c)"/>
+      <text x="500" y="400" fill="#00e5ff" font-family="Share Tech Mono" font-size="8" opacity="0.5">╌╌╌╌ 433 MHz WIRELESS ╌╌╌╌</text>
+
+      <!-- LEGEND -->
+      <rect x="20" y="570" width="1060" height="42" rx="2" fill="rgba(7,20,37,0.8)" stroke="#0d2137"/>
+      <text x="35" y="588" fill="#ffb300" font-family="Share Tech Mono" font-size="7">▬ POWER</text>
+      <text x="120" y="588" fill="#b44dff" font-family="Share Tech Mono" font-size="7">─ ─ PWM</text>
+      <text x="200" y="588" fill="#00e5ff" font-family="Share Tech Mono" font-size="7">╌ ╌ WIRELESS</text>
+      <text x="300" y="588" fill="#00ff88" font-family="Share Tech Mono" font-size="7">── MAVLink/UART</text>
+      <text x="430" y="588" fill="#00e5ff" font-family="Share Tech Mono" font-size="7">──· I²C</text>
+      <text x="35" y="603" fill="#546e7a" font-family="Share Tech Mono" font-size="7">FLOODLINK UAV — COMPLETE SYSTEM WIRING | AIUB EEE CAPSTONE 2025-2026 | NAYEEM, SHAHED, ASHRAFUL, NAZMUN</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ===================== SECTION 6: UPGRADE COMPARISON ===================== -->
+<section id="comparison">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-info">
+      <div class="section-label">// CRITICAL ANALYSIS</div>
+      <h2 class="section-title">COMPONENT LIMITATIONS & BEST-IN-CLASS UPGRADES</h2>
+    </div>
+  </div>
+  <div class="section-divider"></div>
+
+  <!-- COMPARISON TABLES -->
+
+  <!-- FLIGHT CONTROLLER -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// FLIGHT CONTROLLER</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — Pixhawk 2.4.8</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">Pixhawk 2.4.8 (Clone)</div>
+            <div class="comp-item-detail">STM32F427, 168MHz, ArduCopter.<br>Clone quality — inconsistent IMU calibration. No vibration damping. Old connector standard (DF13). Single-IMU — no redundancy if sensor failure. No dedicated coprocessor for logging.<br><br>Performance under high vibration degrades. GPS performance tied to clock quality which varies on clones.</div>
+            <span class="limitation-tag">CLONE RELIABILITY RISK</span>
+            <span class="limitation-tag">NO IMU REDUNDANCY</span>
+            <span class="limitation-tag">OLD CONNECTORS</span>
+            <div class="comp-item-price price-current">BDT 15,000 (~USD 136)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — Cube Orange+</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">CubePilot Cube Orange+</div>
+            <div class="comp-item-detail">STM32H753 480MHz dual-core. Triple redundant IMU (3× IMUs, 2× Baro). Vibration-isolated carrier board. Industrial-grade -40°C to +85°C. UAVCAN/DroneCAN. ADS-B receiver. Full ArduCopter + PX4 support. Genuine certified hardware. Used commercially for SAR, agriculture, delivery.<br><br>Onboard FMU coprocessor offloads logging. UART × 8, I²C × 4, SPI × 2, CAN × 3.</div>
+            <span class="upgrade-tag">TRIPLE IMU REDUNDANCY</span>
+            <span class="upgrade-tag">480 MHz H7</span>
+            <span class="upgrade-tag">CERTIFIED HARDWARE</span>
+            <div class="comp-item-price price-suggested">BDT 58,000 (~USD 530)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOTORS + ESC -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// PROPULSION SYSTEM</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — DJI 2212 + 30A ESC</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">DJI-2212 920kV Brushless Motor</div>
+            <div class="comp-item-detail">Good for hobby/prototype use. No telemetry feedback — ESC cannot report RPM, temperature, or current to flight controller. 920kV is inefficient for longer payloads. Bearings rated for limited hours. No motor protection. <br><br>Generic 30A ESC lacks BLHeli32 firmware. No real-time RPM feedback. ESC desync risk at low throttle. No active braking. No telemetry protocol.</div>
+            <span class="limitation-tag">NO ESC TELEMETRY</span>
+            <span class="limitation-tag">GENERIC BEARINGS</span>
+            <span class="limitation-tag">NO MOTOR TEMP MONITOR</span>
+            <div class="comp-item-price price-current">BDT 5,000 total (~USD 45)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — T-Motor + Flame ESC</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">T-Motor U7 V2 490kV + Flame 60A HV</div>
+            <div class="comp-item-detail">T-Motor U7 V2: Industry-leading efficiency. 490kV matched for 6S operation — 40% more thrust with lower heat. IP44 splash-proof. Titanium alloy motor bell. Dual-sealed bearings (3000hr rated). CNC machined.<br><br>T-Motor Flame 60A HV ESC: UAVCAN/DroneCAN telemetry — real-time RPM, temperature, current per ESC. Active freewheeling. BLHeli32 base. Desync protection. Motor sync lock. Anti-spark plug. Used in DJI Agras-class machines.</div>
+            <span class="upgrade-tag">DRONCAN TELEMETRY</span>
+            <span class="upgrade-tag">IP44 WATERPROOF</span>
+            <span class="upgrade-tag">REAL-TIME RPM</span>
+            <span class="upgrade-tag">3000HR BEARINGS</span>
+            <div class="comp-item-price price-suggested">BDT 82,000 set (~USD 745)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTERY -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// ENERGY SYSTEM</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — 3S 4200mAh LiPo</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">Generic 3S 4200mAh LiPo</div>
+            <div class="comp-item-detail">Prototype-grade LiPo. Low energy density. 3S (11.1V) limits motor efficiency — motors run cooler but waste thrust potential. Rapid voltage sag under load reduces actual usable capacity to ~60%. Sensitive to cold weather (Bangladesh monsoon night temperatures). No smart BMS. No cell balancing during flight. Fire risk if punctured during hard landing. Swelling common after 50–80 cycles.</div>
+            <span class="limitation-tag">RAPID VOLTAGE SAG</span>
+            <span class="limitation-tag">NO BMS PROTECTION</span>
+            <span class="limitation-tag">LOW ENERGY DENSITY</span>
+            <span class="limitation-tag">FIRE RISK</span>
+            <div class="comp-item-price price-current">BDT 3,600 (~USD 33)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — Tattu Plus 6S 22000mAh</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">Tattu Plus 6S 22000mAh Smart LiPo</div>
+            <div class="comp-item-detail">Tattu Plus series: integrated smart BMS. Reports accurate SOC (State of Charge), cycle count, health, temperature, and per-cell voltage directly to flight controller via UART/CAN. 22000mAh capacity provides 25–35 min flight at payload. 6S (22.2V) dramatically improves motor efficiency (40% less current for same thrust = less heat, longer life).<br><br>Ultra-low internal resistance. Stable under 50A+ continuous draw. 25C genuine discharge. Fireproof case. Smart chip for authentic SOC reporting.</div>
+            <span class="upgrade-tag">SMART BMS</span>
+            <span class="upgrade-tag">6S HIGH VOLTAGE</span>
+            <span class="upgrade-tag">ACCURATE SOC</span>
+            <span class="upgrade-tag">22,000 mAh</span>
+            <div class="comp-item-price price-suggested">BDT 45,000 (~USD 410)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// NAVIGATION & POSITIONING</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — M10 GPS (±2.5m CEP)</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">u-blox M10 GNSS Module</div>
+            <div class="comp-item-detail">Good consumer-grade GPS. ±2.5m CEP — acceptable for general navigation, but inadequate for precision landing in tight flood-response zones. No RTK capability. Cold start takes 30–60 seconds. No dead reckoning for GNSS outages (common under bridges, dense vegetation, urban canyons). Single-band L1 only — multipath error in urban Dhaka is significant. No heading information without dedicated compass.</div>
+            <span class="limitation-tag">±2.5m ONLY</span>
+            <span class="limitation-tag">NO RTK</span>
+            <span class="limitation-tag">NO DEAD RECKONING</span>
+            <span class="limitation-tag">L1 ONLY</span>
+            <div class="comp-item-price price-current">BDT 3,800 (~USD 35)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — Here3+ GNSS (RTK-Ready)</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">CubePilot Here3+ GNSS Module</div>
+            <div class="comp-item-detail">Triple-constellation dual-frequency (L1/L2) RTK-capable GNSS. Centimeter-level accuracy with RTK base station (±2cm). Built-in IMU for dead reckoning during GNSS outages. Dual redundant compass (ICM-42688-P + RM3100). IP67 waterproof — crucial for flood operations. DroneCAN protocol for reliable noise-immune communication. Multi-band reduces urban multipath dramatically.<br><br>Hot start in under 1 second. Moving baseline heading at ±0.5° accuracy. CAN bus interface immune to noise from motors.</div>
+            <span class="upgrade-tag">RTK ±2cm ACCURACY</span>
+            <span class="upgrade-tag">IP67 WATERPROOF</span>
+            <span class="upgrade-tag">DEAD RECKONING</span>
+            <span class="upgrade-tag">DRONECAN</span>
+            <span class="upgrade-tag">L1+L2 DUAL BAND</span>
+            <div class="comp-item-price price-suggested">BDT 28,000 (~USD 255)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OBSTACLE AVOIDANCE -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// OBSTACLE AVOIDANCE</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — VL53L0X ToF (2m max)</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">VL53L0X V2 LiDAR Sensor</div>
+            <div class="comp-item-detail">Only 2-meter maximum range — the drone cannot detect obstacles until it is within 2m, leaving no reaction time at cruise speed of 5 m/s. Single direction (downward/forward only) — blind spots exist in 5 other directions. Affected by strong sunlight (IR interference). Rain droplets cause false positives. No 3D point cloud — only scalar distance. Cannot classify obstacle type. Field-of-view is narrow (25°) — can miss obstacles offset from center line.</div>
+            <span class="limitation-tag">2m RANGE ONLY</span>
+            <span class="limitation-tag">NO REACTION TIME AT 5m/s</span>
+            <span class="limitation-tag">SINGLE DIRECTION</span>
+            <span class="limitation-tag">NO 3D MAPPING</span>
+            <span class="limitation-tag">RAIN INTERFERENCE</span>
+            <div class="comp-item-price price-current">BDT 850 (~USD 8)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — Benewake TFmini Plus + Intel RealSense</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">Benewake TFmini Plus + Intel RealSense D435i</div>
+            <div class="comp-item-detail"><strong>Benewake TFmini Plus (×4 directions):</strong> 12-meter range. 100Hz update rate. Ambient light immunity. IP65 dust/splash proof. UART/I²C. At 5m/s you now have 2.4 seconds of reaction time.<br><br><strong>Intel RealSense D435i:</strong> 3D stereo depth camera. 0.2–10m range. 90fps depth stream. Integrated IMU. Full 3D point cloud for real-time path planning. SLAM-capable. Runs on companion computer (RPi5/Jetson Nano). Can detect wires, branches, animals — not just solid walls. Used in commercial drone delivery worldwide.</div>
+            <span class="upgrade-tag">12m RANGE</span>
+            <span class="upgrade-tag">4-DIRECTION SENSING</span>
+            <span class="upgrade-tag">3D DEPTH CAMERA</span>
+            <span class="upgrade-tag">IP65 WEATHERPROOF</span>
+            <span class="upgrade-tag">100Hz UPDATE</span>
+            <div class="comp-item-price price-suggested">BDT 42,000 set (~USD 382)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELEMETRY -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// COMMUNICATION SYSTEM</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — 433 MHz SiK Radio</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">SiK 433 MHz Telemetry Kit</div>
+            <div class="comp-item-detail">100mW output — adequate for open field but attenuates severely through water-laden air and vegetation in monsoon conditions. 250 kbps max throughput — cannot stream video. Single frequency — no frequency hopping in congested urban spectrum. No encryption — commands can be intercepted. No built-in mesh capability. Antenna performance varies on generic modules. Bangladesh has dense 433MHz band usage from IoT devices — interference risk. Ground penetration poor for urban canyons common in Dhaka flood zones.</div>
+            <span class="limitation-tag">NO ENCRYPTION</span>
+            <span class="limitation-tag">NO VIDEO STREAM</span>
+            <span class="limitation-tag">MONSOON ATTENUATION</span>
+            <span class="limitation-tag">NO FREQUENCY HOP</span>
+            <div class="comp-item-price price-current">BDT 8,500 (~USD 77)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — Herelink + 4G LTE Backup</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">CubePilot Herelink + Holybro H9P LTE</div>
+            <div class="comp-item-detail"><strong>Herelink:</strong> 2.4GHz OFDM. 1W output (10× more power). AES-128 encrypted link. Integrated HD video downlink (720p30 live). 20km LoS range. Automatic frequency hopping. Ground station with screen. Sbus/UART passthrough. Works as full GCS + RC controller.<br><br><strong>Holybro H9P LTE Module:</strong> 4G LTE backup link via SIM card. When RF link drops, seamlessly switches to cellular. Bangladesh has extensive Grameenphone/Robi 4G coverage even in flood zones. BVLOS (Beyond Visual Line of Sight) capable. Remote command via internet.</div>
+            <span class="upgrade-tag">AES-128 ENCRYPTED</span>
+            <span class="upgrade-tag">HD VIDEO DOWNLINK</span>
+            <span class="upgrade-tag">4G LTE BACKUP</span>
+            <span class="upgrade-tag">20km RANGE</span>
+            <span class="upgrade-tag">BVLOS READY</span>
+            <div class="comp-item-price price-suggested">BDT 95,000 set (~USD 864)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYLOAD CONTROLLER -->
+  <div style="margin-bottom:2rem;" class="aos">
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1rem;">// PAYLOAD CONTROLLER</div>
+    <div class="comparison-grid">
+      <div class="comp-column">
+        <div class="comp-column-header current-header">❌ CURRENT — Arduino Nano</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--red);">Arduino Nano (ATmega328P)</div>
+            <div class="comp-item-detail">16 MHz 8-bit AVR — adequate for current task but severely constrained for future expansion. No RTOS — all tasks run sequentially, causing timing jitter in MAVLink parsing. 2KB SRAM limits data logging. No WiFi/Bluetooth for diagnostics. Only one hardware UART — shared between debug and Pixhawk. No FPU — floating-point weight calculations are slow. No SD card built-in for logging. No OTA firmware updates. Prone to brownout during servo actuation spike.</div>
+            <span class="limitation-tag">8-BIT ONLY</span>
+            <span class="limitation-tag">NO RTOS</span>
+            <span class="limitation-tag">2KB SRAM</span>
+            <span class="limitation-tag">NO WIFI/BT</span>
+            <span class="limitation-tag">1 UART ONLY</span>
+            <div class="comp-item-price price-current">BDT 400 (~USD 4)</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-column">
+        <div class="comp-column-header suggested-header">✅ SUGGESTED — ESP32-S3 + Raspberry Pi 5</div>
+        <div class="comp-column-body">
+          <div class="comp-item">
+            <div class="comp-item-name" style="color:var(--green);">ESP32-S3 + Raspberry Pi 5 (Companion)</div>
+            <div class="comp-item-detail"><strong>ESP32-S3:</strong> Dual-core 240 MHz Xtensa LX7. Built-in WiFi 6 + Bluetooth 5. FPU + hardware AES. FreeRTOS with true multi-tasking. 512KB SRAM + 8MB PSRAM. Multiple hardware UARTs. OTA firmware updates. WiFi telemetry to phone for field diagnostics. 3× cheaper than Nano with vastly more capability.<br><br><strong>Raspberry Pi 5 Companion:</strong> Handles computer vision from RealSense, MAVLink routing, mission logging to NVMe SSD, 4G LTE modem, and AI-based landing zone detection. 4-core 2.4 GHz ARM A76. Full Linux OS.</div>
+            <span class="upgrade-tag">240 MHz DUAL-CORE</span>
+            <span class="upgrade-tag">WIFI + BT BUILT-IN</span>
+            <span class="upgrade-tag">OTA UPDATES</span>
+            <span class="upgrade-tag">AI COMPANION</span>
+            <span class="upgrade-tag">FREERTOS</span>
+            <div class="comp-item-price price-suggested">BDT 18,000 set (~USD 164)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOTAL COST SUMMARY -->
+  <div class="aos" style="background:var(--bg-card);border:1px solid var(--border-glow);border-radius:4px;padding:2rem;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--amber),var(--green));animation:shimmer 3s linear infinite;background-size:200% 100%;"></div>
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:3px;margin-bottom:1.5rem;">// TOTAL COST COMPARISON</div>
+    <table class="cost-table">
+      <thead>
+        <tr>
+          <th>COMPONENT</th>
+          <th>CURRENT MODEL</th>
+          <th>CURRENT COST (BDT/USD)</th>
+          <th>SUGGESTED MODEL</th>
+          <th>UPGRADE COST (BDT/USD)</th>
+          <th>KEY GAIN</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="6">FLIGHT CONTROL</td></tr>
+        <tr>
+          <td>Flight Controller</td>
+          <td>Pixhawk 2.4.8 Clone</td>
+          <td class="amber-val">15,000 / $136</td>
+          <td>CubePilot Cube Orange+</td>
+          <td class="green-val">58,000 / $530</td>
+          <td>Triple IMU, H7, Certified</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">PROPULSION</td></tr>
+        <tr>
+          <td>Motors × 4</td>
+          <td>DJI-2212 920kV</td>
+          <td class="amber-val">~3,000 / $27</td>
+          <td>T-Motor U7 V2 490kV ×4</td>
+          <td class="green-val">66,000 / $600</td>
+          <td>IP44, 3000hr bearings, efficiency</td>
+        </tr>
+        <tr>
+          <td>ESC × 4</td>
+          <td>Generic 30A ESC</td>
+          <td class="amber-val">2,000 / $18</td>
+          <td>T-Motor Flame 60A HV ×4</td>
+          <td class="green-val">16,000 / $145</td>
+          <td>DroneCAN, RPM telemetry</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">ENERGY</td></tr>
+        <tr>
+          <td>Main Battery</td>
+          <td>3S 4200mAh Generic LiPo</td>
+          <td class="amber-val">3,600 / $33</td>
+          <td>Tattu Plus 6S 22000mAh</td>
+          <td class="green-val">45,000 / $410</td>
+          <td>Smart BMS, 25+ min flight</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">NAVIGATION</td></tr>
+        <tr>
+          <td>GPS Module</td>
+          <td>M10 GPS (±2.5m)</td>
+          <td class="amber-val">3,800 / $35</td>
+          <td>CubePilot Here3+ RTK</td>
+          <td class="green-val">28,000 / $255</td>
+          <td>±2cm RTK, IP67, dead reckoning</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">SENSING</td></tr>
+        <tr>
+          <td>Obstacle Avoidance</td>
+          <td>VL53L0X ToF (2m)</td>
+          <td class="amber-val">850 / $8</td>
+          <td>TFmini Plus ×4 + RealSense D435i</td>
+          <td class="green-val">42,000 / $382</td>
+          <td>12m range, 3D depth, 4-direction</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">COMMUNICATION</td></tr>
+        <tr>
+          <td>Telemetry</td>
+          <td>SiK 433MHz 100mW</td>
+          <td class="amber-val">8,500 / $77</td>
+          <td>Herelink + H9P 4G LTE</td>
+          <td class="green-val">95,000 / $864</td>
+          <td>AES encrypted, HD video, BVLOS</td>
+        </tr>
+        <tr class="cat-row"><td colspan="6">PAYLOAD SYSTEM</td></tr>
+        <tr>
+          <td>Payload Controller</td>
+          <td>Arduino Nano</td>
+          <td class="amber-val">400 / $4</td>
+          <td>ESP32-S3 + RPi 5</td>
+          <td class="green-val">18,000 / $164</td>
+          <td>WiFi, AI, OTA, FreeRTOS</td>
+        </tr>
+        <tr style="background:rgba(0,255,136,0.03);" class="total-row">
+          <td colspan="2"><strong>PROTOTYPE TOTAL</strong></td>
+          <td class="amber-val"><strong>~42,000 BDT (~$382)</strong></td>
+          <td><strong>BEST-IN-CLASS TOTAL</strong></td>
+          <td class="green-val"><strong>~368,000 BDT (~$3,347)</strong></td>
+          <td style="color:var(--cyan);">Full Professional SAR UAV</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+      <div style="background:rgba(255,61,61,0.05);border:1px solid rgba(255,61,61,0.2);border-radius:3px;padding:1rem;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:var(--red);margin-bottom:0.3rem;">7×</div>
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);">COST MULTIPLIER FOR BEST-IN-CLASS</div>
+      </div>
+      <div style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:3px;padding:1rem;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:var(--green);margin-bottom:0.3rem;">∞×</div>
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);">SAFETY IMPROVEMENT FOR REAL DEPLOYMENT</div>
+      </div>
+      <div style="background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.2);border-radius:3px;padding:1rem;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:var(--cyan);margin-bottom:0.3rem;">100%</div>
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);">CONCEPTS VALIDATED BY PROTOTYPE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="position:relative;z-index:2;padding:3rem 2rem;border-top:1px solid var(--border);background:var(--bg-secondary);text-align:center;margin-bottom:30px;">
+  <div style="font-family:var(--font-display);font-size:1.2rem;color:var(--cyan);letter-spacing:4px;margin-bottom:1rem;text-shadow:0 0 20px var(--cyan);">FLOODLINK</div>
+  
+</footer>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot dot-green"></div><span>SYSTEM ONLINE</span></div>
+  
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+// ===== PARTICLES =====
+const particleContainer = document.getElementById('particles');
+for(let i=0;i<25;i++){
+  const p = document.createElement('div');
+  p.className='particle';
+  p.style.cssText = `left:${Math.random()*100}%;animation-duration:${8+Math.random()*15}s;animation-delay:${Math.random()*15}s;opacity:${0.2+Math.random()*0.5};background:${Math.random()>0.5?'#00e5ff':'#00ff88'};`;
+  particleContainer.appendChild(p);
+}
+
+// Clock display removed
+
+// ===== DATA STREAM =====
+const lines=['>> GPS LOCK: 14/14 SAT','>> ALT: 35.2m','>> BATT: 11.08V 87%','>> WEIGHT: 324g OK','>> DOOR: LOCKED','>> ARM STATUS: READY','>> CRUISE SPD: 5.01m/s','>> TEMP: 31.4°C','>> LIDAR: 1.23m','>> RTL ALT: 30m','>> TELEM RSSI: -68dBm','>> WAYPOINT: 2/4','>> DIST HOME: 124m','>> PAYLOAD: 324g','>> BATT USED: 24%','>> ETA: 38s','>> WIND: 2.1m/s NE','>> HEADING: 047°','>> ROLL: 1.2°','>> PITCH: -3.4°','>> YAW: 47.1°','>> MOTOR FL: 1542RPM','>> MOTOR FR: 1538RPM','>> MOTOR RL: 1551RPM','>> MOTOR RR: 1545RPM','>> ARDU VER: 4.3.7','>> SMART BOX: ARMED'];
+let streamContent='';
+lines.forEach(l=>{streamContent+=`<div style="color:${Math.random()>0.7?'#00e5ff':'#78909c'};margin-bottom:4px;">${l}</div>`;});
+streamContent+=streamContent;
+document.getElementById('streamContent').innerHTML=streamContent;
+
+// ===== TABS =====
+function switchTab(panelId,containerId){
+  const container=document.getElementById(containerId);
+  container.querySelectorAll('.tab-panel').forEach(p=>{p.classList.remove('active');});
+  document.getElementById(panelId).classList.add('active');
+  const tabBar=container.previousElementSibling;
+  tabBar.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.remove('active');
+    if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes(panelId)){b.classList.add('active');}
+  });
+}
+
+// ===== MODAL DATA =====
+const modals={
+  pixhawk:{
+    title:'PIXHAWK 2.4.8',
+    sub:'FLIGHT CONTROLLER — ARM Cortex-M4 168MHz',
+    content:`<p class="modal-body">The Pixhawk 2.4.8 is the central nervous system of FloodLink. Running ArduCopter firmware, it handles all autonomous navigation, stabilization, sensor fusion, and failsafe execution. The STM32F427 processor provides enough compute for real-time PID loops and MAVLink message processing simultaneously.</p>
+    <div class="modal-section-title">// FULL SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Processor</td><td>STM32F427 ARM Cortex-M4 @ 168MHz + FPU</td></tr>
+      <tr><td>Memory</td><td>256KB SRAM, 2MB Flash, micro-SD logging</td></tr>
+      <tr><td>IMU Primary</td><td>MPU-6000 (Accel + Gyro)</td></tr>
+      <tr><td>Baro</td><td>MS5611 (±10cm resolution)</td></tr>
+      <tr><td>Compass</td><td>HMC5883L 3-axis</td></tr>
+      <tr><td>PWM Outputs</td><td>8 Main + 6 Auxiliary (14 total)</td></tr>
+      <tr><td>Communication</td><td>5× UART, 2× I²C, 1× SPI, 1× CAN</td></tr>
+      <tr><td>Firmware</td><td>ArduCopter 4.3.x (MAVLink v2)</td></tr>
+      <tr><td>Power Input</td><td>4.5–5.5V via power module</td></tr>
+      <tr><td>Weight</td><td>~38g</td></tr>
+      <tr><td>Cost (Prototype)</td><td>BDT 15,000 (~$136)</td></tr>
+    </table>
+    <div class="modal-section-title">// ROLE IN FLOODLINK</div>
+    <p>Receives mission data from QGroundControl via 433MHz telemetry. Fuses GPS, IMU, and barometer data via EKF3 filter. Sends PWM signals to 4 ESCs for motor control. Receives ARM/DISARM status from Smart Box via TELEM2. Triggers RTL on battery failsafe below 9.5V. Logs all data to micro-SD for post-flight analysis.</p>`
+  },
+  motor:{
+    title:'DJI-2212 920kV',
+    sub:'BRUSHLESS MOTOR × 4 — Primary Propulsion',
+    content:`<p>The DJI-2212 920kV motors convert electrical energy into rotational mechanical energy. The "kV" rating means the motor spins at 920 RPM for every 1 volt applied — so on a 3S (11.1V) battery, free-spin speed approaches ~10,200 RPM.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>KV Rating</td><td>920 kV</td></tr>
+      <tr><td>Configuration</td><td>3-Phase BLDC Outrunner</td></tr>
+      <tr><td>Voltage Range</td><td>7.4V – 14.8V (2S–4S)</td></tr>
+      <tr><td>Max Current</td><td>~22A per motor</td></tr>
+      <tr><td>Prop Compatibility</td><td>8"–10" diameter</td></tr>
+      <tr><td>Shaft Diameter</td><td>3.17mm</td></tr>
+      <tr><td>Weight</td><td>~60g each</td></tr>
+      <tr><td>Mounting</td><td>16mm × 19mm</td></tr>
+    </table>
+    <div class="modal-section-title">// THRUST DATA WITH DJI 9405 PROPS (3S)</div>
+    <table class="spec-table">
+      <tr><td>50% Throttle</td><td>~280g thrust per motor</td></tr>
+      <tr><td>75% Throttle</td><td>~420g thrust per motor</td></tr>
+      <tr><td>100% Throttle</td><td>~550g thrust per motor</td></tr>
+      <tr><td>Hover Throttle (1.55kg)</td><td>~55–60% throttle</td></tr>
+    </table>
+    <p>At hover (4 motors), total thrust ≈ system weight. The 400g payload capacity represents the available margin above hover thrust at safe battery levels.</p>`
+  },
+  esc:{
+    title:'30A Electronic Speed Controller',
+    sub:'ESC × 4 — Motor Current Management',
+    content:`<p>Each ESC acts as a variable power converter between the battery and its motor. The Pixhawk sends a 50Hz PWM signal (1000–2000μs) to each ESC, which then modulates the 3-phase current to the motor proportionally.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Continuous Current</td><td>30A</td></tr>
+      <tr><td>Burst Current (10s)</td><td>40A</td></tr>
+      <tr><td>Input Voltage</td><td>2S–4S LiPo (7.4V–14.8V)</td></tr>
+      <tr><td>BEC Output</td><td>5V / 3A Linear BEC</td></tr>
+      <tr><td>Control Signal</td><td>PWM 1000–2000μs at 50Hz</td></tr>
+      <tr><td>Weight</td><td>~26g each</td></tr>
+      <tr><td>Firmware</td><td>Generic (no BLHeli)</td></tr>
+      <tr><td>Protocols</td><td>Standard PWM only</td></tr>
+    </table>
+    <div class="modal-section-title">// LIMITATION NOTE</div>
+    <p>This ESC provides no telemetry back to Pixhawk. RPM, temperature, and current data are unavailable. The suggested upgrade (T-Motor Flame 60A HV with DroneCAN) addresses this completely.</p>`
+  },
+  battery:{
+    title:'3S 4200mAh Lithium Polymer',
+    sub:'MAIN FLIGHT BATTERY — 11.1V Nominal',
+    content:`<p>The lithium polymer battery stores the energy for all flight operations. Its capacity (4200mAh) defines maximum flight time, while its discharge rate (C rating) determines available peak current for high-thrust maneuvers.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Configuration</td><td>3S (3 cells in series)</td></tr>
+      <tr><td>Nominal Voltage</td><td>11.1V (3.7V × 3)</td></tr>
+      <tr><td>Charged Voltage</td><td>12.6V (4.2V × 3)</td></tr>
+      <tr><td>Low Voltage Cutoff</td><td>9.9V (3.3V × 3) — Pixhawk failsafe at 9.5V</td></tr>
+      <tr><td>Capacity</td><td>4,200 mAh</td></tr>
+      <tr><td>Discharge Rate</td><td>25C = 105A peak</td></tr>
+      <tr><td>Weight</td><td>~270g</td></tr>
+      <tr><td>Connector</td><td>XT60</td></tr>
+    </table>
+    <div class="modal-section-title">// FLIGHT TIME CALCULATION</div>
+    <table class="spec-table">
+      <tr><td>Hover Current (0g payload)</td><td>~16A total</td></tr>
+      <tr><td>Hover Current (400g payload)</td><td>~22A total</td></tr>
+      <tr><td>Usable Capacity (80% rule)</td><td>3,360 mAh</td></tr>
+      <tr><td>Theoretical Hover (0g)</td><td>~12.6 min</td></tr>
+      <tr><td>Theoretical Hover (400g)</td><td>~9.2 min</td></tr>
+      <tr><td>Actual (includes cruise)</td><td>~6–8 min per round trip</td></tr>
+    </table>`
+  },
+  gps:{
+    title:'M10 GPS MODULE',
+    sub:'u-blox M10 GNSS — Multi-Constellation Navigation',
+    content:`<p>The M10 GPS module provides the geographic position data essential for autonomous waypoint navigation. The u-blox M10 chip simultaneously tracks satellites from multiple constellations for improved accuracy and fix reliability.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>GNSS Chip</td><td>u-blox M10</td></tr>
+      <tr><td>Constellations</td><td>GPS + GLONASS + BeiDou + Galileo + SBAS</td></tr>
+      <tr><td>Max Satellites Tracked</td><td>32 simultaneous</td></tr>
+      <tr><td>Position Accuracy (CEP)</td><td>±2.5m (open sky)</td></tr>
+      <tr><td>Velocity Accuracy</td><td>±0.05 m/s</td></tr>
+      <tr><td>Update Rate</td><td>10 Hz</td></tr>
+      <tr><td>Communication</td><td>UART @ 115200 baud</td></tr>
+      <tr><td>Protocol</td><td>UBX + NMEA 0183</td></tr>
+      <tr><td>Cold Start</td><td>~30s (first fix)</td></tr>
+      <tr><td>Hot Start</td><td>~1s (subsequent fixes)</td></tr>
+      <tr><td>Antenna</td><td>Integrated ceramic patch</td></tr>
+      <tr><td>Compass</td><td>Built-in (external reference)</td></tr>
+    </table>
+    <div class="modal-section-title">// ROLE IN AUTONOMOUS NAVIGATION</div>
+    <p>Position data flows at 10Hz into Pixhawk's EKF3 (Extended Kalman Filter) which fuses it with IMU accelerometer data to produce a smooth, high-frequency position estimate. Waypoints stored in memory are compared against current GPS position to generate steering commands.</p>`
+  },
+  telemetry:{
+    title:'433 MHz TELEMETRY KIT',
+    sub:'SiK Radio — Bidirectional Ground-to-Air Link',
+    content:`<p>The 433MHz telemetry system creates a bidirectional wireless data link between the ground station (Mission Planner on laptop) and the airborne Pixhawk. Uses Adaptive Time Division Multiplexing (ATDM) for simultaneous uplink/downlink without collision.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Frequency</td><td>433 MHz (ISM Band)</td></tr>
+      <tr><td>Output Power</td><td>100 mW (20 dBm)</td></tr>
+      <tr><td>Receiver Sensitivity</td><td>-117 dBm</td></tr>
+      <tr><td>Max Air Data Rate</td><td>250 kbps</td></tr>
+      <tr><td>Typical Link Rate</td><td>57,600 baud</td></tr>
+      <tr><td>LoS Range</td><td>10 km (theoretical)</td></tr>
+      <tr><td>Protocol</td><td>MAVLink v2 with FEC</td></tr>
+      <tr><td>Antenna</td><td>SMA connector, omnidirectional</td></tr>
+      <tr><td>Flow Control</td><td>ATDM (Adaptive TDM)</td></tr>
+    </table>
+    <div class="modal-section-title">// DATA STREAMS</div>
+    <table class="spec-table">
+      <tr><td>Uplink (GCS→Drone)</td><td>Mission upload, parameter set, mode change, RTL command</td></tr>
+      <tr><td>Downlink (Drone→GCS)</td><td>GPS pos, altitude, speed, battery, attitude, Smart Box status</td></tr>
+    </table>`
+  },
+  lidar:{
+    title:'VL53L0X V2 LiDAR',
+    sub:'Time-of-Flight Distance Sensor — 940nm IR',
+    content:`<p>The VL53L0X uses Time-of-Flight (ToF) laser ranging. It emits a 940nm infrared pulse and measures the round-trip travel time with picosecond precision. Distance = (speed of light × time) / 2. No mechanical parts, no wear, no moving mirrors.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Technology</td><td>940nm IR Time-of-Flight Laser</td></tr>
+      <tr><td>Range</td><td>30mm – 2,000mm (2m max)</td></tr>
+      <tr><td>Accuracy</td><td>±3% under standard conditions</td></tr>
+      <tr><td>Field of View</td><td>25° cone</td></tr>
+      <tr><td>Interface</td><td>I²C (400 kHz Fast Mode)</td></tr>
+      <tr><td>Supply Voltage</td><td>2.6V – 3.5V</td></tr>
+      <tr><td>Active Current</td><td>~19mA</td></tr>
+      <tr><td>Standby Current</td><td>&lt;5μA</td></tr>
+      <tr><td>Package</td><td>2.4 × 4.4 × 1.0mm (micro SMD)</td></tr>
+    </table>
+    <div class="modal-section-title">// MEASURED PERFORMANCE IN FLOODLINK</div>
+    <table class="spec-table">
+      <tr><td>MAPE (50g–1000g range)</td><td>0.1129%</td></tr>
+      <tr><td>Std Deviation Error</td><td>0.1787%</td></tr>
+      <tr><td>Max Absolute Error</td><td>1.4g</td></tr>
+      <tr><td>Mean Absolute Error</td><td>0.345g</td></tr>
+      <tr><td>Root Mean Square Error</td><td>0.540g</td></tr>
+    </table>
+    <p>Altitude hold mode in Pixhawk uses this sensor for the final 2m of descent, providing centimeter-level landing precision regardless of GPS accuracy.</p>`
+  },
+  arduino:{
+    title:'ARDUINO NANO — ATmega328P',
+    sub:'SMART BOX MCU — 8-bit AVR @ 16MHz',
+    content:`<p>The Arduino Nano serves as the embedded controller inside the Smart Payload Box. It orchestrates all safety logic, sensor readings, actuator control, and MAVLink communication with Pixhawk.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>MCU</td><td>ATmega328P (8-bit AVR)</td></tr>
+      <tr><td>Clock Speed</td><td>16 MHz</td></tr>
+      <tr><td>Flash Memory</td><td>32 KB (0.5KB bootloader)</td></tr>
+      <tr><td>SRAM</td><td>2 KB</td></tr>
+      <tr><td>EEPROM</td><td>1 KB</td></tr>
+      <tr><td>Digital I/O Pins</td><td>14 (6 PWM capable)</td></tr>
+      <tr><td>Analog Input Pins</td><td>8 (A0–A7, 10-bit ADC)</td></tr>
+      <tr><td>Hardware UART</td><td>1× (D0/D1)</td></tr>
+      <tr><td>I²C</td><td>1× (A4/A5)</td></tr>
+      <tr><td>SPI</td><td>1×</td></tr>
+      <tr><td>Operating Voltage</td><td>5V</td></tr>
+    </table>
+    <div class="modal-section-title">// PIN ASSIGNMENTS IN FLOODLINK</div>
+    <table class="spec-table">
+      <tr><td>D0/D1</td><td>UART TX/RX → Pixhawk MAVLink</td></tr>
+      <tr><td>D5</td><td>HX711 SCK (Clock)</td></tr>
+      <tr><td>D6</td><td>HX711 DOUT (Data)</td></tr>
+      <tr><td>D3</td><td>Hall Effect Sensor Input</td></tr>
+      <tr><td>D9</td><td>Servo Motor PWM Output</td></tr>
+      <tr><td>D8</td><td>Buzzer Digital Output</td></tr>
+      <tr><td>D2</td><td>Red LED (Error State)</td></tr>
+      <tr><td>D6</td><td>Green LED (Armed State)</td></tr>
+      <tr><td>A0</td><td>Battery Voltage Monitor (ADC)</td></tr>
+      <tr><td>VIN</td><td>Aux LiPo Input (7.4V–12V)</td></tr>
+    </table>`
+  },
+  loadcell:{
+    title:'10kg LOAD CELL + HX711',
+    sub:'WEIGHT SENSING SYSTEM — 24-bit Precision ADC',
+    content:`<p>The load cell is a strain-gauge transducer that converts mechanical force (weight) into a small differential voltage (microvolts). The HX711 is a dedicated 24-bit ADC specifically designed for load cell amplification and digitization.</p>
+    <div class="modal-section-title">// LOAD CELL SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Capacity</td><td>10 kg (selected to cover full delivery range)</td></tr>
+      <tr><td>Operating Principle</td><td>Wheatstone Bridge (4 strain gauges)</td></tr>
+      <tr><td>Output Sensitivity</td><td>~1mV/V at full load</td></tr>
+      <tr><td>Material</td><td>Aluminium alloy</td></tr>
+      <tr><td>Overload Tolerance</td><td>120% of rated capacity</td></tr>
+    </table>
+    <div class="modal-section-title">// HX711 ADC SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Resolution</td><td>24-bit (16.7 million steps)</td></tr>
+      <tr><td>Programmable Gain</td><td>32 / 64 / 128×</td></tr>
+      <tr><td>Sample Rate</td><td>10 Hz or 80 Hz selectable</td></tr>
+      <tr><td>Interface</td><td>2-Wire serial (CLK + DOUT)</td></tr>
+      <tr><td>Supply Voltage</td><td>2.6V – 5.5V</td></tr>
+      <tr><td>Input Noise</td><td>50nV RMS (at 10 SPS, 128 gain)</td></tr>
+    </table>
+    <div class="modal-section-title">// MEASURED ACCURACY RESULTS</div>
+    <table class="spec-table">
+      <tr><td>Test Range</td><td>50g to 1000g (50g steps, 20 points)</td></tr>
+      <tr><td>MAPE</td><td>0.1129%</td></tr>
+      <tr><td>Std Deviation %Error</td><td>0.1787%</td></tr>
+      <tr><td>Max Absolute Error</td><td>1.4g</td></tr>
+      <tr><td>Mean Absolute Error</td><td>0.345g</td></tr>
+      <tr><td>RMSE</td><td>0.540g</td></tr>
+    </table>
+    <p>These results validate that the load cell system can reliably distinguish between acceptable payloads and overload conditions with sub-gram precision across the full delivery range.</p>`
+  },
+  hall:{
+    title:'HALL EFFECT SENSOR',
+    sub:'DOOR POSITION DETECTION — Non-Contact Magnetic',
+    content:`<p>The Hall effect sensor detects the presence of a magnetic field. A small magnet is affixed to the payload door; the sensor is mounted on the box frame. When the door closes, the magnet aligns with the sensor, producing a digital LOW output (door closed confirmation).</p>
+    <div class="modal-section-title">// WHY HALL OVER MECHANICAL SWITCH?</div>
+    <table class="spec-table">
+      <tr><td>Wear</td><td>Zero mechanical wear — infinite operation cycles</td></tr>
+      <tr><td>Vibration</td><td>Immune to vibration-induced false triggers</td></tr>
+      <tr><td>Bounce</td><td>No contact bounce — clean digital signal</td></tr>
+      <tr><td>Waterproofing</td><td>Sensor sealed — works wet</td></tr>
+      <tr><td>Current</td><td>Ultra-low (< 1mA) standby</td></tr>
+    </table>
+    <div class="modal-section-title">// LOGIC IN SAFETY CHAIN</div>
+    <p>Door OPEN → Hall output HIGH → Arduino reads HIGH → Safety condition FAILED → Send DISARM to Pixhawk + Activate Buzzer.<br><br>Door CLOSED → Hall output LOW → Condition PASSED → Proceed to battery check.</p>`
+  },
+  servo:{
+    title:'SG90 MICRO SERVO MOTOR',
+    sub:'PAYLOAD DOOR ACTUATOR — PWM Controlled',
+    content:`<p>The SG90 servo motor physically controls the payload door locking mechanism. Unlike a DC motor, the servo has built-in position feedback — it maintains its commanded angle against external forces, making it ideal for a door latch that must stay closed during vibration.</p>
+    <div class="modal-section-title">// SPECIFICATIONS</div>
+    <table class="spec-table">
+      <tr><td>Torque (4.8V)</td><td>1.8 kg·cm</td></tr>
+      <tr><td>Torque (6.0V)</td><td>2.2 kg·cm</td></tr>
+      <tr><td>Operating Speed</td><td>0.12 sec/60° (4.8V)</td></tr>
+      <tr><td>Operating Voltage</td><td>4.8V – 6.0V</td></tr>
+      <tr><td>Control Signal</td><td>PWM 50Hz, 1ms–2ms pulse</td></tr>
+      <tr><td>Rotation Range</td><td>0° – 180°</td></tr>
+      <tr><td>Weight</td><td>~9g</td></tr>
+      <tr><td>Connector</td><td>JR / Futaba standard 3-pin</td></tr>
+    </table>
+    <div class="modal-section-title">// POSITION COMMANDS</div>
+    <table class="spec-table">
+      <tr><td>0° (CLOSED)</td><td>Door locked during flight — activated pre-takeoff</td></tr>
+      <tr><td>90° (OPEN)</td><td>Door open for delivery — activated on MISSION_ITEM_REACHED</td></tr>
+      <tr><td>Force-Open</td><td>If Hall detects door ajar (obstruction) — servo drives to 90°</td></tr>
+    </table>`
+  }
+};
+
+// ===== MODAL OPEN/CLOSE =====
+function openModal(id){
+  const data=modals[id];
+  if(!data)return;
+  const overlay=document.getElementById('modalOverlay');
+  document.getElementById('modalContent').innerHTML=`
+    <div class="modal-title" style="color:var(--cyan);">${data.title}</div>
+    <div class="modal-subtitle">${data.sub}</div>
+    <div class="modal-body">${data.content}</div>
+  `;
+  overlay.classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+function closeModalOnBg(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ===== ANIMATE ON SCROLL =====
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');}});
+},{threshold:0.1});
+document.querySelectorAll('.aos').forEach(el=>observer.observe(el));
+
+// ===== PROGRESS BARS =====
+const barObserver=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.perf-bar-container').forEach(bar=>{
+        const val=bar.getAttribute('data-val');
+        const fill=bar.querySelector('.perf-bar-fill');
+        if(fill&&val){setTimeout(()=>{fill.style.width=val+'%';},200);}
+      });
+    }
+  });
+},{threshold:0.3});
+document.querySelectorAll('.aos').forEach(el=>barObserver.observe(el));
+document.querySelectorAll('[data-val]').forEach(bar=>{
+  if(!bar.closest('.aos')){
+    const fill=bar.querySelector('.perf-bar-fill');
+    const val=bar.getAttribute('data-val');
+    if(fill)setTimeout(()=>{fill.style.width=val+'%';},800);
+  }
+});
+
+// ===== SECTION ACTIVE HIGHLIGHT =====
+window.addEventListener('scroll',()=>{
+  document.querySelectorAll('nav .nav-links a').forEach(a=>{
+    const section=document.querySelector(a.getAttribute('href'));
+    if(section){
+      const rect=section.getBoundingClientRect();
+      if(rect.top<=100&&rect.bottom>100){a.style.color='var(--cyan)';a.style.textShadow='0 0 10px var(--cyan)';}
+      else{a.style.color='';a.style.textShadow='';}
+    }
+  });
+});
+
+// ===== TRIGGER VISIBLE FOR ON-SCREEN ELEMENTS =====
+window.addEventListener('load',()=>{
+  document.querySelectorAll('.aos').forEach(el=>{
+    const rect=el.getBoundingClientRect();
+    if(rect.top<window.innerHeight){el.classList.add('visible');}
+  });
+});
+</script>
+</body>
+</html>
