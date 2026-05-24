@@ -1,0 +1,90 @@
+%% Quadcopter RPM responses: Forward / Backward / Right / Left
+clear; clc; close all;
+
+% Vehicle & motor/prop parameters
+m   = 1.8;                 % kg
+g   = 9.81;                % m/s^2
+L   = 0.225;               % m (arm length)
+s   = [+1 -1 +1 -1];       % rotor spin signs [FL, FR, RR, RL] (+CCW, -CW)
+
+rpm_hover = 12000;                    % hover speed (each rotor)
+w_hover   = rpm_hover * 2*pi/60;      % rad/s
+w_max     = 18000 * 2*pi/60;          % rad/s
+w_min     = 0;
+
+% Thrust/torque model: T = kT*w^2, Q = kQ*w^2
+kT  = (m*g)/(4*w_hover^2);            % so mg = 4*kT*w_hover^2
+gamma_yaw = 0.05;                      % Q/T ratio
+kQ  = gamma_yaw * kT;
+
+% First-order motor lag
+tau_m = 0.12;             % s
+Ts    = 1e-3;             % s
+alpha = Ts/tau_m;
+
+Tend  = 6;                % s horizon
+tstep = 2;                % s step time
+
+% Mixer (maps [F; tau_x; tau_y; tau_z] -> w^2)
+B = [ kT,      kT,      kT,      kT;        % total thrust
+     -kT*L,   +kT*L,   +kT*L,   -kT*L;      % roll  tau_x
+     +kT*L,   +kT*L,   -kT*L,   -kT*L;      % pitch tau_y
+      kQ*s(1),kQ*s(2), kQ*s(3), kQ*s(4)];   % yaw   tau_z
+Mix = B \ eye(4);                            % robust inverse
+
+U_hover = [m*g; 0; 0; 0];                    % hover wrench
+
+% Command magnitudes
+tau_step = 0.05 * m*g*L;   % Nm for roll/pitch steps
+
+% Simulate four cases (Forward, Backward, Right, Left)
+RPM_Forward  = simulate_case([0; 0; -tau_step; 0], Mix, U_hover, ...
+    w_hover, w_min, w_max, alpha, Ts, Tend, tstep);    % nose down
+RPM_Backward = simulate_case([0; 0; +tau_step; 0], Mix, U_hover, ...
+    w_hover, w_min, w_max, alpha, Ts, Tend, tstep);    % nose up
+RPM_Right    = simulate_case([0; +tau_step; 0; 0], Mix, U_hover, ...
+    w_hover, w_min, w_max, alpha, Ts, Tend, tstep);    % roll right
+RPM_Left     = simulate_case([0; -tau_step; 0; 0], Mix, U_hover, ...
+    w_hover, w_min, w_max, alpha, Ts, Tend, tstep);    % roll left
+
+% Plot
+names = {'Forward','Backward','Right','Left'};
+figure('Name','Rotor RPM – Basic Movements','Color','w');
+cases = {RPM_Forward, RPM_Backward, RPM_Right, RPM_Left};
+
+for k = 1:4
+    rpm = cases{k};
+    subplot(2,2,k); hold on; grid on;
+    plot(rpm.t, rpm.FL, 'b-', 'LineWidth',1.3);
+    plot(rpm.t, rpm.FR, 'r--', 'LineWidth',1.3);
+    plot(rpm.t, rpm.RR, 'k:', 'LineWidth',1.3);
+    plot(rpm.t, rpm.RL, 'g-.', 'LineWidth',1.3);
+    xline(tstep,'k--','Step','LabelVerticalAlignment','bottom','Alpha',0.4);
+    title(names{k}); ylabel('RPM'); xlabel('Time (s)');
+    legend('FL (CCW)','FR (CW)','RR (CCW)','RL (CW)','Location','best');
+end
+
+% -------- helper function --------
+function RPM = simulate_case(dU, Mix, U_hover, w_hover, w_min, w_max, alpha, Ts, Tend, tstep)
+    t = 0:Ts:Tend;
+    w = repmat(w_hover,4,1);
+    rpm_out = zeros(numel(t),4);
+
+    for i = 1:numel(t)
+        U = U_hover + (t(i) >= tstep)*dU;      % step at tstep
+        w_sq_cmd = Mix * U;                    % per-motor w^2
+        w_sq_cmd = min(max(w_sq_cmd, w_min^2), w_max^2);
+        w_cmd = sqrt(w_sq_cmd);
+
+        % first-order motor lag
+        w = (1-alpha)*w + alpha*w_cmd;
+
+        rpm_out(i,:) = (60/(2*pi))*w.';
+    end
+
+    RPM.t  = t(:);
+    RPM.FL = rpm_out(:,1);
+    RPM.FR = rpm_out(:,2);
+    RPM.RR = rpm_out(:,3);
+    RPM.RL = rpm_out(:,4);
+end

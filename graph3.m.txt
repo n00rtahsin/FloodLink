@@ -1,0 +1,74 @@
+%% Endurance vs Wind Speed (km/h) — anchored at 7.5 km/h
+% Model: I(v) = I_ref * [ 1 + c1*(v - v_ref) + c2*(v - v_ref)^2 ]
+% where v is wind speed in km/h and I_ref is the current at v_ref.
+% We set v_ref = 7.5 km/h and I_ref = 132.365 A so that
+% a 22 Ah pack with 10% reserve yields ~9 minutes at 7.5 km/h.
+
+clear; clc; close all
+
+% --------- Inputs you can edit ----------
+cap_Ah       = 22;      % battery capacities to compare (Ah)
+reserveFrac  = 0.10;         % 10% reserved to protect the battery
+v_kmh        = 0:1:30;       % wind speeds to evaluate (km/h)
+
+% Anchor point (your requirement):
+v_ref        = 7.5;          % km/h where we want ~9 min on 22 Ah
+I_ref_A      = 132.365;      % A, current draw at v_ref
+
+% Make 0 km/h last a little longer:
+% Choose how much *lower* the current is at 0 km/h vs at v_ref.
+dropAtZero   = 0.05;         % 5% lower current at 0 km/h than at v_ref
+
+% Curvature (controls growth at high winds):
+c2           = 0.0015;       % per (km/h)^2 (adjust if you have logs)
+% Given g(0) = 1 - dropAtZero = 1 - d  and  g(v)=1 + c1*(v-v_ref) + c2*(v-v_ref)^2
+% solve c1 so that g(0) meets the desired drop:
+c1           = dropAtZero/v_ref + c2*v_ref;
+% ----------------------------------------
+
+% Dimensionless penalty factor g(v):
+g = @(v) 1 + c1*(v - v_ref) + c2*(v - v_ref).^2;
+
+% Current vs wind (km/h):
+I_A = I_ref_A .* g(v_kmh);
+
+% Endurance for each battery (minutes):
+usable_Ah = cap_Ah .* (1 - reserveFrac);
+t_min     = zeros(numel(cap_Ah), numel(v_kmh));
+for k = 1:numel(cap_Ah)
+    t_min(k,:) = 60 * (usable_Ah(k) ./ I_A);   % time = Ah/A * 60
+end
+
+% --------- Plot ---------
+figure('Color','w','Position',[100 100 980 560]);
+hold on; grid on; box on;
+
+for k = 1:numel(cap_Ah)
+    plot(v_kmh, t_min(k,:), 'LineWidth', 2, ...
+        'DisplayName', sprintf('%.0f Ah (reserved 10%%)', cap_Ah(k)));
+end
+
+% Dotted reference lines at 7 and 8 km/h
+xline(7 ,':',' 7 km/h (usual in BD)','LabelHorizontalAlignment','left','LabelVerticalAlignment','bottom');
+xline(8 ,':',' 8 km/h (usual in BD)','LabelHorizontalAlignment','left','LabelVerticalAlignment','bottom');
+
+% Mark and annotate the 7.5 km/h → ~9 min point for the 22 Ah pack
+[~, iRef] = min(abs(v_kmh - v_ref));
+idx22     = find(abs(cap_Ah - 22) < 1e-6, 1);
+if ~isempty(idx22)
+    text(v_kmh(iRef), t_min(idx22,iRef), sprintf('  %.1f min @ %.1f km/h', t_min(idx22,iRef), v_ref), ...
+        'VerticalAlignment','bottom');
+end
+
+xlabel('Wind speed (km/h)');
+ylabel('Estimated endurance (minutes)');
+title('Battery Endurance using Anchored Quadratic Wind-Penalty Model');
+
+legend('Location','northeast');
+
+% Helpful markers at a few speeds (including 0 km/h so you see it's higher than at 7.5)
+markAt = [0 7 7.5 8 10 15 20];
+for k = 1:numel(cap_Ah)
+    yq = interp1(v_kmh, t_min(k,:), markAt, 'linear');
+    plot(markAt, yq, '.', 'MarkerSize', 14, 'HandleVisibility','off');
+end
